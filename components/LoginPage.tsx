@@ -16,11 +16,14 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onAdminTrigger }) => {
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [isNewUser, setIsNewUser] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showForgotPinModal, setShowForgotPinModal] = useState(false);
   
   const [tapCount, setTapCount] = useState(0);
   const [showAdminDialog, setShowAdminDialog] = useState(false);
   const [adminPass, setAdminPass] = useState('');
   const tapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const ADMIN_CONTACT = '01940308516';
 
   const handleLogoTap = () => {
     if (tapTimeoutRef.current) clearTimeout(tapTimeoutRef.current);
@@ -56,7 +59,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onAdminTrigger }) => {
       return;
     }
 
-    if (cleanPhone === '01940308516') {
+    if (cleanPhone === ADMIN_CONTACT && role !== 'ADMIN') {
       alert('এই ফোন নাম্বারটি সংরক্ষিত। দয়া করে অন্য নাম্বার ব্যবহার করুন।');
       return;
     }
@@ -125,7 +128,16 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onAdminTrigger }) => {
           />
         </div>
 
-        <div className="w-full space-y-4">
+        {!isNewUser && (
+          <button 
+            onClick={() => setShowForgotPinModal(true)}
+            className="text-amber-500/80 text-[11px] font-black uppercase tracking-widest hover:text-amber-400 transition-colors"
+          >
+            পিন ভুলে গেছেন?
+          </button>
+        )}
+
+        <div className="w-full space-y-4 pt-2">
           <button 
             onClick={handleFinalAuth}
             disabled={isLoading}
@@ -250,6 +262,35 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onAdminTrigger }) => {
 
         {stage === 'INFO' ? renderInfoInputs() : renderPinInput()}
       </div>
+
+      {showForgotPinModal && (
+        <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-2xl flex items-center justify-center z-[100] p-6 animate-in fade-in duration-300">
+          <div className="bg-slate-900/90 p-10 rounded-[56px] border border-white/10 w-full max-w-sm shadow-2xl text-center space-y-8">
+            <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto border border-amber-500/20">
+               <svg className="w-10 h-10 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+            </div>
+            <div className="space-y-3">
+              <h3 className="text-2xl font-black text-white tracking-tight">পিন রিসেট করবেন?</h3>
+              <p className="text-slate-400 text-sm leading-relaxed">নিরাপত্তার স্বার্থে পিন রিসেট করতে সরাসরি অ্যাডমিনের সাথে যোগাযোগ করুন। আপনার পরিচয় যাচাই করে পিন রিসেট করে দেওয়া হবে।</p>
+            </div>
+            <div className="flex flex-col gap-4">
+              <a 
+                href={`tel:${ADMIN_CONTACT}`}
+                className="w-full bg-amber-500 text-slate-950 font-black py-5 rounded-3xl active:scale-95 transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-3 shadow-lg"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                অ্যাডমিনকে কল দিন
+              </a>
+              <button 
+                onClick={() => setShowForgotPinModal(false)}
+                className="w-full py-4 text-slate-500 font-black text-[10px] uppercase tracking-[0.3em]"
+              >
+                ফিরে যান
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showAdminDialog && (
         <div className="fixed inset-0 bg-slate-950/98 backdrop-blur-3xl flex items-center justify-center z-50 p-6 animate-in fade-in duration-500">

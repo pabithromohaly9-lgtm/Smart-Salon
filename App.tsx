@@ -13,16 +13,12 @@ declare global {
   }
 }
 
-const LOGO_BASE64 = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA1MTIgNTEyIiBmaWxsPSIjZmJiZjI0Ij48cGF0aCBkPSJNMzA0LjIgMjQwLjJMMzg2LjEgMTIxLjhjMTEuNy0xNyA3LjEtNDAuMi0xMC4zLTUxLjVjLTE3LjQtMTEuMy00MC42LTYuMS01Mi4zIDEwLjlMMjU2IDE4Mi4ybC02Ny41LTEwMWMtMTEuNy0xNy0zNC45LTIyLjItNTIuMy0xMC45Yy0xNy40IDExLjMtMjIgMzQuNS0xMC4zIDUxLjVsODEuOSAxMTguNEwxMDQuNCAzOTEuOGMtMTAuMiAxNC44LTEzLjYgMzMuMy05LjUgNTFjNC4xIDE3LjcgMTUuMyAzMi41IDMxLjEgNDAuOWMxNS44IDguNCAzNC4xIDkuNSA1MC42IDIuOWMxNi41LTYuNiAyOS41LTIwLjIgMzUuOC0zNy40bDQuNi0xMTguOUwzMDAgNDUwLjJjNi4zIDE3LjIgMTkuMyAzMC44IDM1LjggMzcuNGMxNi41IDYuNiAzNC44IDUuNSA1MC42LTIuOWMxNS44LTguNCAyNy0yMy4yIDMxLjEtNDAuOWM0LjEtMTcuNyAuNy0zNi4yLTkuNS01MWwtMTAzLjgtMTUyLjZ6bS0xNTMuMSAxODcuNWMtOC45IDQuMy0xOS40IDMuNy0yNy43LTEuNGMtOC4zLTUuMS0xMy4yLTE0LTE0LjctMjMuM2MtMS41LTkuMyAxLjItMTguNyA3LjQtMjUuOUwyMTEuNSAyNDFsLTYwLjQgMTg2Ljd6bTI1My4zLTI3LjNjLTEuNSA5LjMtNi40IDE4LjItMTQuNyAyMy4zYy04LjMgNS4xLTE4LjggNS43LTI3LjcgMS40TDMwMS4zIDI0MWw5NS40IDEzNi4xYzYuMiA3LjIgOC45IDE2LjYgNy40IDI1Ljl6Ii8+PC9zdmc+";
-
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [view, setView] = useState<'AUTH' | 'DASHBOARD' | 'ADMIN'>('AUTH');
   const [toast, setToast] = useState<{ title: string; message: string } | null>(null);
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [showInstallModal, setShowInstallModal] = useState(false);
 
-  const isProduction = window.location.hostname === 'smart-salon-1.vercel.app';
+  const isProduction = window.location.hostname.includes('vercel.app') || window.location.hostname !== 'localhost';
 
   // OneSignal Tagging Helper
   const tagUserOneSignal = (user: User) => {
@@ -32,11 +28,14 @@ const App: React.FC = () => {
       await OneSignal.login(user.id);
       const roleGroup = user.role === 'OWNER' ? 'owners' : user.role === 'USER' ? 'users' : 'admins';
       await OneSignal.User.addTag("role", roleGroup);
+      
+      // Request permission immediately upon identifying user
+      OneSignal.Notifications.requestPermission();
     });
   };
 
   useEffect(() => {
-    // 1. OneSignal Initialization (Only on production domain)
+    // 1. OneSignal Initialization
     if (isProduction) {
       window.OneSignalDeferred = window.OneSignalDeferred || [];
       window.OneSignalDeferred.push(async (OneSignal: any) => {
@@ -47,13 +46,6 @@ const App: React.FC = () => {
         });
       });
     }
-
-    // 2. PWA Install Logic
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      setTimeout(() => setShowInstallModal(true), 3000);
-    });
 
     const user = getCurrentUser();
     if (user) {
@@ -80,15 +72,6 @@ const App: React.FC = () => {
     };
   }, []);
 
-  const handleInstallClick = async () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      setDeferredPrompt(null);
-      setShowInstallModal(false);
-    }
-  };
-
   const handleLogin = (role: UserRole) => {
     const user = getCurrentUser();
     if (user) {
@@ -112,27 +95,6 @@ const App: React.FC = () => {
 
   return (
     <div className="relative min-h-screen">
-      {showInstallModal && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center p-6 animate-in fade-in duration-300">
-          <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-md" onClick={() => setShowInstallModal(false)}></div>
-          <div className="glass w-full max-w-sm p-10 rounded-[48px] shadow-2xl relative animate-in zoom-in duration-500 text-center space-y-8">
-            <div className="flex justify-center">
-              <div className="w-24 h-24 bg-amber-500/10 rounded-[32px] flex items-center justify-center border border-amber-500/20 shadow-lg">
-                <img src={LOGO_BASE64} className="w-14 h-14 drop-shadow-lg" alt="Logo" />
-              </div>
-            </div>
-            <div>
-              <h2 className="text-3xl font-black gradient-gold tracking-tight mb-3">Smart Salon অ্যাপটি ইন্সটল করুন</h2>
-              <p className="text-slate-400 text-sm font-medium leading-relaxed">সেরা অভিজ্ঞতা এবং রিয়েল-টাইম নোটিফিকেশন পেতে অ্যাপটি আপনার হোম স্ক্রিনে যোগ করুন।</p>
-            </div>
-            <div className="space-y-4">
-              <button onClick={handleInstallClick} className="w-full bg-gradient-to-r from-amber-400 to-amber-600 text-slate-950 font-black py-5 rounded-[24px] shadow-xl active:scale-95 transition-all uppercase tracking-widest text-sm">এখনই ইন্সটল করুন</button>
-              <button onClick={() => setShowInstallModal(false)} className="w-full text-slate-500 font-bold text-xs uppercase tracking-widest py-2">পরে করবো</button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {toast && (
         <div className="fixed top-6 inset-x-6 z-[9999] animate-in slide-in-from-top duration-500">
           <div className="bg-slate-900/90 backdrop-blur-2xl border border-amber-500/30 p-5 rounded-[28px] shadow-2xl flex gap-4 items-center">
