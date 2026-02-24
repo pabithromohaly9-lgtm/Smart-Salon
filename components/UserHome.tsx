@@ -67,14 +67,14 @@ const UserHome: React.FC<UserHomeProps> = ({ user: initialUser, onLogout }) => {
   const filteredSalons = approvedSalons.filter(s => {
     const searchLower = search.toLowerCase();
     const matchesSearch = 
-      s.name.toLowerCase().includes(searchLower) || 
-      s.location.toLowerCase().includes(searchLower) ||
-      s.ownerName.toLowerCase().includes(searchLower);
+      s.name?.toLowerCase().includes(searchLower) || 
+      s.location?.toLowerCase().includes(searchLower) ||
+      s.ownerName?.toLowerCase().includes(searchLower);
     
     if (activeFilter === 'TOP_RATED') return matchesSearch && s.rating >= 4.8;
     if (activeFilter === 'POPULAR') return matchesSearch && s.rating >= 4.5;
     if (activeFilter === 'BUDGET') {
-      const minPrice = s.services.length > 0 ? Math.min(...s.services.map(ser => ser.price)) : 9999;
+      const minPrice = s.services?.length > 0 ? Math.min(...s.services.map(ser => ser.price)) : 9999;
       return matchesSearch && minPrice <= 200;
     }
     return matchesSearch;
@@ -123,7 +123,7 @@ const UserHome: React.FC<UserHomeProps> = ({ user: initialUser, onLogout }) => {
     setShowBookingSummary(true);
   };
 
-  const handleBookingConfirmed = (userName: string, userPhone: string) => {
+  const handleBookingConfirmed = async (userName: string, userPhone: string) => {
     if (!selectedSalon) return;
     if (userName !== user.name || userPhone !== user.phone) {
       const updated = updateUser({ name: userName, phone: userPhone });
@@ -140,7 +140,7 @@ const UserHome: React.FC<UserHomeProps> = ({ user: initialUser, onLogout }) => {
     };
 
     try {
-      const booking = createBooking(bookingData);
+      const booking = await createBooking(bookingData);
       setFinalBooking(booking);
     } catch (error: any) {
       if (error.message === 'DUPLICATE_BOOKING') {
@@ -365,7 +365,7 @@ const UserHome: React.FC<UserHomeProps> = ({ user: initialUser, onLogout }) => {
         <div className="space-y-5">
           {userBookings.map(b => {
             const salon = allSalons.find(s => s.id === b.salonId);
-            const bookingServices = salon?.services.filter(s => b.serviceIds.includes(s.id)) || [];
+            const bookingServices = salon?.services?.filter(s => b.serviceIds?.includes(s.id)) || [];
             const createdAtTime = new Date(b.createdAt || Date.now()).getTime();
             const timeDiffHours = (new Date().getTime() - createdAtTime) / (1000 * 60 * 60);
             const canCancel = b.status === 'PENDING' && timeDiffHours < 1;
@@ -408,7 +408,7 @@ const UserHome: React.FC<UserHomeProps> = ({ user: initialUser, onLogout }) => {
                 <div className="flex justify-between items-center relative z-10">
                    <div className="text-left">
                       <p className="text-slate-600 text-[9px] font-black uppercase tracking-[0.2em]">বুকিং আইডি</p>
-                      <p className="text-slate-500 font-mono text-xs mt-0.5">#{b.id.slice(-8)}</p>
+                      <p className="text-slate-500 font-mono text-xs mt-0.5">#{b.id?.slice(-8) || '...'}</p>
                    </div>
                    <div className="text-right">
                       <p className="text-slate-600 text-[9px] font-black uppercase tracking-[0.2em]">মোট খরচ</p>
@@ -428,7 +428,7 @@ const UserHome: React.FC<UserHomeProps> = ({ user: initialUser, onLogout }) => {
       <div className="relative group mb-8">
         <div className="w-36 h-36 bg-gradient-to-br from-amber-400 via-amber-500 to-amber-700 rounded-full p-1.5 shadow-2xl">
           <div className="w-full h-full rounded-full bg-slate-950 flex items-center justify-center overflow-hidden border-4 border-slate-950">
-            {isCompressing ? <div className="animate-spin rounded-full h-8 w-8 border-2 border-amber-500 border-t-transparent"></div> : (user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" alt="Profile" /> : <svg className="w-16 h-16 text-slate-800" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" /></svg>)}
+            {isCompressing ? <div className="animate-spin rounded-full h-8 w-8 border-2 border-amber-500 border-t-transparent"></div> : (user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" alt="Profile" /> : <div className="w-full h-full bg-slate-900 flex items-center justify-center text-slate-500 font-black text-3xl">{user.name?.charAt(0) || '?'}</div>)}
           </div>
         </div>
         <button onClick={handleAvatarClick} disabled={isCompressing} className="absolute bottom-1 right-1 w-11 h-11 bg-amber-500 rounded-2xl flex items-center justify-center text-slate-950 border-4 border-slate-950 shadow-xl active:scale-90 transition-all disabled:opacity-50"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg></button>
@@ -487,7 +487,7 @@ const UserHome: React.FC<UserHomeProps> = ({ user: initialUser, onLogout }) => {
         <div className="flex items-center gap-3">
           <button onClick={() => setShowAppInfo(true)} className="w-10 h-10 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-center active:scale-90"><svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></button>
           <button onClick={toggleNotifications} className="relative w-10 h-10 bg-slate-900 border border-slate-800 rounded-xl flex items-center justify-center active:scale-90"><svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>{unreadCount > 0 && <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] bg-red-600 rounded-full border border-slate-950 flex items-center justify-center text-[8px] font-black">{unreadCount}</span>}</button>
-          <div onClick={() => setActiveTab('PROFILE')} className={`w-10 h-10 rounded-xl border-2 overflow-hidden cursor-pointer active:scale-90 transition-all shadow-lg ${activeTab === 'PROFILE' ? 'border-amber-500' : 'border-slate-800'}`}>{user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-slate-900 flex items-center justify-center text-slate-500 font-bold">{user.name.charAt(0)}</div>}</div>
+          <div onClick={() => setActiveTab('PROFILE')} className={`w-10 h-10 rounded-xl border-2 overflow-hidden cursor-pointer active:scale-90 transition-all shadow-lg ${activeTab === 'PROFILE' ? 'border-amber-500' : 'border-slate-800'}`}>{user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-slate-900 flex items-center justify-center text-slate-500 font-bold">{user.name?.charAt(0) || '?'}</div>}</div>
         </div>
       </header>
 

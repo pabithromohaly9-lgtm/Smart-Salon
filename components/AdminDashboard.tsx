@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { getDB, adminUpdateSalonStatus, adminConfirmPayment, updateSalonPriority, markNotificationsAsRead, adminToggleSalonActive, deleteUser, adminDeleteSalon, updateSalonInfo } from '../services/storage';
+// Fix: Removed non-existent export adminUpdateSalonStatus from '../services/storage'
+import { getDB, adminConfirmPayment, updateSalonPriority, markNotificationsAsRead, adminToggleSalonActive, deleteUser, adminDeleteSalon, updateSalonInfo } from '../services/storage';
 import { User, Salon, Booking, OwnerPayment, AppNotification } from '../types';
 
 interface AdminDashboardProps {
@@ -42,8 +43,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const filteredUsers = useMemo(() => {
     return db.users.filter(u => 
       u.role !== 'ADMIN' && 
-      (u.name.toLowerCase().includes(userSearch.toLowerCase()) || 
-       u.phone.includes(userSearch))
+      (u.name?.toLowerCase().includes(userSearch.toLowerCase()) || 
+       u.phone?.includes(userSearch))
     );
   }, [db.users, userSearch]);
 
@@ -201,7 +202,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                     <td className="p-8">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-2xl overflow-hidden border border-slate-800 shrink-0">
-                          {u.avatar ? <img src={u.avatar} className="w-full h-full object-cover" alt="" /> : <div className="w-full h-full bg-slate-800 flex items-center justify-center text-slate-500 font-black">{u.name.charAt(0)}</div>}
+                          {u.avatar ? <img src={u.avatar} className="w-full h-full object-cover" alt="" /> : <div className="w-full h-full bg-slate-800 flex items-center justify-center text-slate-500 font-black">{u.name?.charAt(0) || '?'}</div>}
                         </div>
                         <span className="font-bold text-white text-base group-hover:text-amber-500 transition-colors">{u.name}</span>
                       </div>

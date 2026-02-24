@@ -38,7 +38,7 @@ const SalonDetails: React.FC<SalonDetailsProps> = ({ salon: initialSalon, onBack
   };
 
   const handleWhatsApp = () => {
-    const waLink = salon.socialLinks?.whatsapp || `https://wa.me/880${salon.ownerPhone.startsWith('0') ? salon.ownerPhone.substring(1) : salon.ownerPhone}`;
+    const waLink = salon.socialLinks?.whatsapp || `https://wa.me/880${salon.ownerPhone?.startsWith('0') ? salon.ownerPhone.substring(1) : salon.ownerPhone}`;
     window.open(waLink, '_blank');
   };
 
@@ -237,7 +237,7 @@ const SalonDetails: React.FC<SalonDetailsProps> = ({ salon: initialSalon, onBack
                          <div className="flex justify-between items-start mb-4">
                             <div className="flex items-center gap-4">
                                <div className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center border border-slate-700 overflow-hidden shrink-0">
-                                  {review.userAvatar ? <img src={review.userAvatar} className="w-full h-full object-cover" /> : <span className="text-xs font-black text-slate-500">{review.userName.charAt(0)}</span>}
+                                  {review.userAvatar ? <img src={review.userAvatar} className="w-full h-full object-cover" /> : <span className="text-xs font-black text-slate-500">{review.userName?.charAt(0) || '?'}</span>}
                                </div>
                                <div>
                                   <p className="font-black text-slate-200 text-sm leading-tight">{review.userName}</p>

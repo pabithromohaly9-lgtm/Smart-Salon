@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { UserRole } from '../types';
-import { loginUser, getDB } from '../services/storage';
+import { loginUser, checkUserExists } from '../services/storage';
 
 interface LoginPageProps {
   onLogin: (role: UserRole) => void;
@@ -15,11 +15,15 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onAdminTrigger }) => {
   const [stage, setStage] = useState<'INFO' | 'PIN'>('INFO');
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [isNewUser, setIsNewUser] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showForgotPinModal, setShowForgotPinModal] = useState(false);
   
   const [tapCount, setTapCount] = useState(0);
   const [showAdminDialog, setShowAdminDialog] = useState(false);
   const [adminPass, setAdminPass] = useState('');
   const tapTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const ADMIN_CONTACT = '01940308516';
 
   const handleLogoTap = () => {
     if (tapTimeoutRef.current) clearTimeout(tapTimeoutRef.current);
@@ -33,7 +37,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onAdminTrigger }) => {
   };
 
   const handleAdminAuth = () => {
-    // এখানে এডমিন প্যানেল ওপেন করার সিক্রেট পাসওয়ার্ড
     if (adminPass === '143') {
       onAdminTrigger();
     } else {
@@ -43,7 +46,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onAdminTrigger }) => {
     }
   };
 
-  const moveToPinStage = (role: UserRole) => {
+  const moveToPinStage = async (role: UserRole) => {
     const trimmedName = name.trim();
     const cleanPhone = phone.replace(/\D/g, ''); 
 
@@ -56,27 +59,33 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onAdminTrigger }) => {
       return;
     }
 
-    // এডমিন ফোন নাম্বার দিয়ে অন্য রোল এ অ্যাকাউন্ট খোলা যাবে না
-    if (cleanPhone === '01940308516') {
+    if (cleanPhone === ADMIN_CONTACT && role !== 'ADMIN') {
       alert('এই ফোন নাম্বারটি সংরক্ষিত। দয়া করে অন্য নাম্বার ব্যবহার করুন।');
       return;
     }
 
-    setSelectedRole(role);
-    const db = getDB();
-    const userExists = db.users.some(u => u.phone === cleanPhone);
-    setIsNewUser(!userExists);
-    setStage('PIN');
+    setIsLoading(true);
+    try {
+      const exists = await checkUserExists(cleanPhone);
+      setSelectedRole(role);
+      setIsNewUser(!exists);
+      setStage('PIN');
+    } catch (e) {
+      alert('সার্ভারের সাথে সংযোগ করা যাচ্ছে না।');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleFinalAuth = () => {
+  const handleFinalAuth = async () => {
     if (pin.length !== 4) {
       alert('দয়া করে ৪ ডিজিটের পিন দিন');
       return;
     }
 
+    setIsLoading(true);
     try {
-      loginUser(name.trim(), phone.replace(/\D/g, ''), selectedRole!, pin);
+      await loginUser(name.trim(), phone.replace(/\D/g, ''), selectedRole!, pin);
       onLogin(selectedRole!);
     } catch (error: any) {
       if (error.message === 'INVALID_PIN') {
@@ -87,6 +96,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onAdminTrigger }) => {
       } else {
         alert('সমস্যা হয়েছে, আবার চেষ্টা করুন।');
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -94,11 +105,11 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onAdminTrigger }) => {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-500">
       <div className="text-center space-y-2">
         <h3 className="text-2xl font-black text-white tracking-tight">
-          {isNewUser ? 'পিন সেট করুন' : 'পিন ভেরিফাই করুন'}
+          {isNewUser ? 'নতুন পিন সেট করুন' : 'পিন ভেরিফাই করুন'}
         </h3>
         <p className="text-slate-400 text-sm">
           {isNewUser 
-            ? 'নিরাপত্তার জন্য ৪ ডিজিটের একটি গোপন পিন দিন' 
+            ? 'ভবিষ্যতে লগইন করার জন্য ৪ ডিজিটের একটি গোপন পিন দিন' 
             : 'আপনার আইডিতে প্রবেশ করতে পিনটি লিখুন'}
         </p>
       </div>
@@ -109,23 +120,36 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onAdminTrigger }) => {
             type="password" 
             maxLength={4}
             placeholder="••••"
-            className="w-full bg-slate-900 border-2 border-slate-700 rounded-3xl py-6 text-center text-4xl font-black tracking-[1em] text-amber-500 focus:outline-none focus:border-amber-500/50 transition-all placeholder:text-slate-800"
+            disabled={isLoading}
+            className="w-full bg-slate-900 border-2 border-slate-700 rounded-3xl py-6 text-center text-4xl font-black tracking-[1em] text-amber-500 focus:outline-none focus:border-amber-500/50 transition-all placeholder:text-slate-800 disabled:opacity-50"
             value={pin}
             onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
             autoFocus
           />
         </div>
 
-        <div className="w-full space-y-4">
+        {!isNewUser && (
+          <button 
+            onClick={() => setShowForgotPinModal(true)}
+            className="text-amber-500/80 text-[11px] font-black uppercase tracking-widest hover:text-amber-400 transition-colors"
+          >
+            পিন ভুলে গেছেন?
+          </button>
+        )}
+
+        <div className="w-full space-y-4 pt-2">
           <button 
             onClick={handleFinalAuth}
-            className="w-full bg-gradient-to-r from-amber-400 to-amber-600 text-slate-950 font-black py-5 rounded-[24px] shadow-xl active:scale-95 transition-all uppercase tracking-widest text-sm"
+            disabled={isLoading}
+            className="w-full bg-gradient-to-r from-amber-400 to-amber-600 text-slate-950 font-black py-5 rounded-[24px] shadow-xl active:scale-95 transition-all uppercase tracking-widest text-sm disabled:opacity-50 flex items-center justify-center gap-2"
           >
+            {isLoading && <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div>}
             {isNewUser ? 'একাউন্ট তৈরি করুন' : 'লগইন নিশ্চিত করুন'}
           </button>
           
           <button 
             onClick={() => { setStage('INFO'); setPin(''); }}
+            disabled={isLoading}
             className="w-full text-slate-500 font-bold text-xs uppercase tracking-widest hover:text-slate-300 transition-colors py-2"
           >
             পিছনে যান
@@ -178,26 +202,36 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onAdminTrigger }) => {
       <div className="grid grid-cols-2 gap-5 pt-4">
         <button 
           onClick={() => moveToPinStage('USER')}
-          className="group relative bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 hover:border-indigo-500/50 text-white font-bold py-7 rounded-[32px] transition-all duration-500 shadow-2xl active:scale-95 flex flex-col items-center justify-center gap-3 overflow-hidden"
+          disabled={isLoading}
+          className="group relative bg-slate-900/90 backdrop-blur-xl border border-slate-700/50 hover:border-indigo-500/50 text-white font-bold py-7 rounded-[32px] transition-all duration-500 shadow-2xl active:scale-95 flex flex-col items-center justify-center gap-3 overflow-hidden disabled:opacity-50"
         >
-          <div className="w-12 h-12 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          </div>
-          <span className="text-[12px] font-black uppercase tracking-[0.1em] text-slate-300">ইউজার লগইন</span>
+          {isLoading ? <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div> : (
+            <>
+                <div className="w-12 h-12 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                </div>
+                <span className="text-[12px] font-black uppercase tracking-[0.1em] text-slate-300">ইউজার লগইন</span>
+            </>
+          )}
         </button>
         
         <button 
           onClick={() => moveToPinStage('OWNER')}
-          className="group relative bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 text-slate-950 font-black py-7 rounded-[32px] transition-all duration-500 shadow-[0_20px_40px_rgba(217,119,6,0.3)] active:scale-95 flex flex-col items-center justify-center gap-3 overflow-hidden border border-white/30"
+          disabled={isLoading}
+          className="group relative bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600 text-slate-950 font-black py-7 rounded-[32px] transition-all duration-500 shadow-[0_20px_40px_rgba(217,119,6,0.3)] active:scale-95 flex flex-col items-center justify-center gap-3 overflow-hidden border border-white/30 disabled:opacity-50"
         >
-          <div className="w-12 h-12 rounded-full bg-slate-950/20 flex items-center justify-center shadow-lg">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-          </div>
-          <span className="text-[12px] font-black uppercase tracking-[0.1em] text-slate-900">ওনার লগইন</span>
+          {isLoading ? <div className="w-6 h-6 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div> : (
+            <>
+                <div className="w-12 h-12 rounded-full bg-slate-950/20 flex items-center justify-center shadow-lg">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                </div>
+                <span className="text-[12px] font-black uppercase tracking-[0.1em] text-slate-900">ওনার লগইন</span>
+            </>
+          )}
         </button>
       </div>
     </div>
@@ -228,6 +262,35 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onAdminTrigger }) => {
 
         {stage === 'INFO' ? renderInfoInputs() : renderPinInput()}
       </div>
+
+      {showForgotPinModal && (
+        <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-2xl flex items-center justify-center z-[100] p-6 animate-in fade-in duration-300">
+          <div className="bg-slate-900/90 p-10 rounded-[56px] border border-white/10 w-full max-w-sm shadow-2xl text-center space-y-8">
+            <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto border border-amber-500/20">
+               <svg className="w-10 h-10 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+            </div>
+            <div className="space-y-3">
+              <h3 className="text-2xl font-black text-white tracking-tight">পিন রিসেট করবেন?</h3>
+              <p className="text-slate-400 text-sm leading-relaxed">নিরাপত্তার স্বার্থে পিন রিসেট করতে সরাসরি অ্যাডমিনের সাথে যোগাযোগ করুন। আপনার পরিচয় যাচাই করে পিন রিসেট করে দেওয়া হবে।</p>
+            </div>
+            <div className="flex flex-col gap-4">
+              <a 
+                href={`tel:${ADMIN_CONTACT}`}
+                className="w-full bg-amber-500 text-slate-950 font-black py-5 rounded-3xl active:scale-95 transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-3 shadow-lg"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>
+                অ্যাডমিনকে কল দিন
+              </a>
+              <button 
+                onClick={() => setShowForgotPinModal(false)}
+                className="w-full py-4 text-slate-500 font-black text-[10px] uppercase tracking-[0.3em]"
+              >
+                ফিরে যান
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showAdminDialog && (
         <div className="fixed inset-0 bg-slate-950/98 backdrop-blur-3xl flex items-center justify-center z-50 p-6 animate-in fade-in duration-500">
