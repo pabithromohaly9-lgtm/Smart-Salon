@@ -1,8 +1,7 @@
 
-// @ts-nocheck
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Salon, Booking, Service, OwnerPayment, AppNotification } from '../types';
-import { getDB, getSalonByOwner, logout, updateBookingStatus, addService, updateService, deleteService, addOwnerPayment, updateSalonInfo, markNotificationsAsRead, updateUser, checkMonthlyPaymentStatus, addNotification, compressImage, fetchAll, ensureSalonExists } from '../services/storage';
+import { getDB, getSalonByOwner, logout, updateBookingStatus, addService, updateService, deleteService, addOwnerPayment, updateSalonInfo, markNotificationsAsRead, updateUser, checkMonthlyPaymentStatus, addNotification, compressImage } from '../services/storage';
 
 interface OwnerHomeProps {
   user: User;
@@ -13,44 +12,38 @@ type Tab = 'DASHBOARD' | 'BOOKINGS' | 'SERVICES' | 'PAYMENTS' | 'SETTINGS';
 
 const OwnerHome: React.FC<OwnerHomeProps> = ({ user: initialUser, onLogout }) => {
   const [activeTab, setActiveTab] = useState<Tab>('DASHBOARD');
-  const [salon, setSalon] = useState<Salon | undefined>(undefined);
+  const [salon, setSalon] = useState<Salon | undefined>(getSalonByOwner(initialUser.id));
   const [db, setDb] = useState(getDB());
   const [user, setUser] = useState<User>(initialUser);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showAppInfo, setShowAppInfo] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [paymentStatus, setPaymentStatus] = useState({ isDue: false, isSuspended: false });
-  const [isInitializing, setIsInitializing] = useState(true);
-  const [retryCount, setRetryCount] = useState(0);
 
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingSalon, setIsSavingSalon] = useState(false);
   const [isCompressing, setIsCompressing] = useState(false);
 
-  // Profile States
   const [editOwnerName, setEditOwnerName] = useState(user.name);
   const [editOwnerAvatar, setEditOwnerAvatar] = useState(user.avatar || '');
   const ownerAvatarRef = useRef<HTMLInputElement>(null);
 
-  // Salon States
-  const [editSalonName, setEditSalonName] = useState('');
-  const [editSalonLocation, setEditSalonLocation] = useState('');
-  const [editSalonDescription, setEditSalonDescription] = useState('');
-  const [editMapLink, setEditMapLink] = useState('');
-  const [editOpeningTime, setEditOpeningTime] = useState('10:00 AM');
-  const [editClosingTime, setEditClosingTime] = useState('10:00 PM');
-  const [editSalonPhone, setEditSalonPhone] = useState('');
-  const [editFB, setEditFB] = useState('');
-  const [editInsta, setEditInsta] = useState('');
-  const [editWA, setEditWA] = useState('');
-  const [salonIsActive, setSalonIsActive] = useState(true);
-  const [salonImage, setSalonImage] = useState('');
-  const [salonPortfolio, setSalonPortfolio] = useState<string[]>([]);
-  
+  const [editSalonName, setEditSalonName] = useState(salon?.name || '');
+  const [editSalonLocation, setEditSalonLocation] = useState(salon?.location || '');
+  const [editSalonDescription, setEditSalonDescription] = useState(salon?.description || '');
+  const [editMapLink, setEditMapLink] = useState(salon?.mapLink || '');
+  const [editOpeningTime, setEditOpeningTime] = useState(salon?.businessHours?.open || '10:00 AM');
+  const [editClosingTime, setEditClosingTime] = useState(salon?.businessHours?.close || '10:00 PM');
+  const [editSalonPhone, setEditSalonPhone] = useState(salon?.ownerPhone || '');
+  const [editFB, setEditFB] = useState(salon?.socialLinks?.facebook || '');
+  const [editInsta, setEditInsta] = useState(salon?.socialLinks?.instagram || '');
+  const [editWA, setEditWA] = useState(salon?.socialLinks?.whatsapp || '');
+  const [salonIsActive, setSalonIsActive] = useState(salon?.isActive ?? true);
+  const [salonImage, setSalonImage] = useState(salon?.image || '');
+  const [salonPortfolio, setSalonPortfolio] = useState<string[]>(salon?.portfolio || []);
   const salonCoverRef = useRef<HTMLInputElement>(null);
   const portfolioInputRef = useRef<HTMLInputElement>(null);
 
-  // Service Form States
   const [showServiceForm, setShowServiceForm] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
   const [serviceName, setServiceName] = useState('');
@@ -62,98 +55,79 @@ const OwnerHome: React.FC<OwnerHomeProps> = ({ user: initialUser, onLogout }) =>
   const [payAmount, setPayAmount] = useState('');
   const [payTrxID, setPayTrxID] = useState('');
 
-  // Initial Data Sync
   useEffect(() => {
-    const init = async () => {
-      await fetchAll();
-      const currentSalon = getSalonByOwner(user.id);
-      if (!currentSalon && retryCount < 2) {
-        await ensureSalonExists(user);
-        await fetchAll();
-        setRetryCount(prev => prev + 1);
-      }
-      refreshData();
-      setIsInitializing(false);
-    };
-    init();
-
+    refreshData();
     const handleGlobalUpdate = () => refreshData();
     window.addEventListener('smart_salon_db_updated', handleGlobalUpdate);
+    const interval = setInterval(() => refreshData(), 10000); 
     return () => {
       window.removeEventListener('smart_salon_db_updated', handleGlobalUpdate);
+      clearInterval(interval);
     };
-  }, [user.id, retryCount]);
-
-  // Sync state with salon data when salon changes
-  useEffect(() => {
-    if (salon) {
-      setEditSalonName(salon.name || '');
-      setEditSalonLocation(salon.location || '');
-      setEditSalonDescription(salon.description || '');
-      setEditMapLink(salon.mapLink || '');
-      setEditOpeningTime(salon.businessHours?.open || '10:00 AM');
-      setEditClosingTime(salon.businessHours?.close || '10:00 PM');
-      setEditSalonPhone(salon.ownerPhone || '');
-      setEditFB(salon.socialLinks?.facebook || '');
-      setEditInsta(salon.socialLinks?.instagram || '');
-      setEditWA(salon.socialLinks?.whatsapp || '');
-      setSalonIsActive(salon.isActive);
-      setSalonImage(salon.image || '');
-      setSalonPortfolio(salon.portfolio || []);
-    }
-  }, [salon?.id, activeTab === 'SETTINGS']);
+  }, [user.id]);
 
   const refreshData = () => {
     const updatedDb = getDB();
     setDb(updatedDb);
     setNotifications(updatedDb.notifications.filter(n => n.userId === user.id));
     const currentSalon = getSalonByOwner(user.id);
-    if (currentSalon) setSalon(currentSalon);
-    setPaymentStatus(checkMonthlyPaymentStatus(user.id));
+    setSalon(currentSalon);
+    
+    const pStatus = checkMonthlyPaymentStatus(user.id);
+    setPaymentStatus(pStatus);
+
+    if (pStatus.isDue) {
+      const alreadyNotified = updatedDb.notifications.some(n => 
+        n.userId === user.id && 
+        n.title === 'পেমেন্ট রিমাইন্ডার' && 
+        new Date(n.createdAt).getDate() === new Date().getDate()
+      );
+      if (!alreadyNotified) {
+        addNotification(user.id, 'পেমেন্ট রিমাইন্ডার', 'অনুগ্রহ করে ১৫ তারিখের মধ্যে আপনার ১০% কমিশন পরিশোধ করুন। অন্যথায় সেলুন বন্ধ হয়ে যাবে।');
+      }
+    }
+    
     const storageUser = updatedDb.users.find(u => u.id === user.id);
-    if (storageUser) setUser(storageUser);
+    if (storageUser) {
+      setUser(storageUser);
+    }
   };
 
   const toggleNotifications = () => {
-    if (showNotifications) markNotificationsAsRead(user.id);
+    if (showNotifications) {
+      markNotificationsAsRead(user.id);
+    }
     setShowNotifications(!showNotifications);
   };
 
   const handleUpdateStatus = (bookingId: string, status: Booking['status']) => {
     updateBookingStatus(bookingId, status);
+    refreshData();
   };
 
-  const handleSaveProfile = async () => {
+  const handleSaveProfile = () => {
     if (!editOwnerName.trim()) return alert('নাম লিখুন');
     setIsSavingProfile(true);
-    try {
-      const updated = await updateUser({ name: editOwnerName, avatar: editOwnerAvatar });
+    setTimeout(() => {
+      const updated = updateUser({ name: editOwnerName, avatar: editOwnerAvatar });
       if (updated) {
         setUser(updated);
+        setIsSavingProfile(false);
         alert('প্রোফাইল সেভ হয়েছে!');
       }
-    } catch (e) {
-      alert('প্রোফাইল সেভ করতে সমস্যা হয়েছে।');
-    } finally {
-      setIsSavingProfile(false);
-    }
+    }, 2000);
   };
 
-  const handleSaveSalonSettings = async () => {
-    const currentSalon = salon || getSalonByOwner(user.id);
-    if (!currentSalon) {
-       await ensureSalonExists(user);
-       await fetchAll();
-       const reFetched = getSalonByOwner(user.id);
-       if (!reFetched) return alert("দুঃখিত, আপনার সেলুন রেকর্ড পাওয়া যায়নি। দয়া করে একটু পর আবার চেষ্টা করুন।");
-       setSalon(reFetched);
+  const handleSaveSalonSettings = () => {
+    const freshSalon = getSalonByOwner(user.id);
+    if (!freshSalon) {
+       alert("দুঃখিত, আপনার সেলুন রেকর্ড পাওয়া যায়নি।");
+       return;
     }
-    
     if (!editSalonName.trim()) return alert('সেলুনের নাম লিখুন');
-    
     setIsSavingSalon(true);
-    try {
-      await updateSalonInfo(currentSalon!.id, {
+    setTimeout(() => {
+      updateSalonInfo(freshSalon.id, {
         name: editSalonName,
         location: editSalonLocation,
         description: editSalonDescription,
@@ -165,47 +139,44 @@ const OwnerHome: React.FC<OwnerHomeProps> = ({ user: initialUser, onLogout }) =>
         portfolio: salonPortfolio,
         socialLinks: { facebook: editFB, instagram: editInsta, whatsapp: editWA }
       });
-      alert('সেলুন তথ্য সফলভাবে সেভ হয়েছে!');
-      refreshData();
-    } catch (e) {
-      console.error(e);
-      alert('তথ্য সেভ করতে সমস্যা হয়েছে, আবার চেষ্টা করুন।');
-    } finally {
+      const updatedSalon = getSalonByOwner(user.id);
+      setSalon(updatedSalon);
       setIsSavingSalon(false);
-    }
-  };
-
-  const handleServiceFormSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const currentSalon = salon || getSalonByOwner(user.id);
-    if (!currentSalon) return alert('সেলুন খুঁজে পাওয়া যায়নি। পেজটি রিফ্রেশ করুন।');
-    if (!serviceName.trim() || !servicePrice.trim() || !serviceDuration.trim() || !serviceImage) {
-      alert('সবগুলো ঘর পূরণ করুন');
-      return;
-    }
-    const serviceData = { name: serviceName.trim(), price: parseInt(servicePrice), duration: parseInt(serviceDuration), image: serviceImage };
-    try {
-      if (editingService) {
-        await updateService(currentSalon.id, editingService.id, serviceData);
-      } else {
-        await addService(currentSalon.id, serviceData);
-      }
-      resetServiceForm();
-      alert('সার্ভিস সফলভাবে আপডেট হয়েছে!');
-    } catch (e) {
-      alert('সার্ভিস আপডেট করতে সমস্যা হয়েছে।');
-    }
+      alert('সেলুন তথ্য সেভ হয়েছে!');
+    }, 2000);
   };
 
   const ownerBookings = [...db.bookings].filter(b => b.salonId === salon?.id).reverse();
-  const pendingBookingsCount = ownerBookings.filter(b => b.status === 'PENDING').length;
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   const stats = {
     totalEarnings: ownerBookings.filter(b => b.status === 'COMPLETED').reduce((acc, curr) => acc + curr.totalPrice, 0),
     todayCount: ownerBookings.filter(b => b.date === new Date().toISOString().split('T')[0]).length,
-    pendingCount: pendingBookingsCount,
+    pendingCount: ownerBookings.filter(b => b.status === 'PENDING').length,
     acceptedCount: ownerBookings.filter(b => b.status === 'CONFIRMED').length,
+  };
+
+  const handleServiceFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const freshSalon = getSalonByOwner(user.id);
+    if (!freshSalon) return;
+    if (!serviceName.trim() || !servicePrice.trim() || !serviceDuration.trim() || !serviceImage) {
+      alert('সবগুলো ঘর পূরণ করুন');
+      return;
+    }
+    const serviceData = {
+      name: serviceName.trim(),
+      price: parseInt(servicePrice),
+      duration: parseInt(serviceDuration),
+      image: serviceImage
+    };
+    if (editingService) {
+      updateService(freshSalon.id, editingService.id, serviceData);
+    } else {
+      addService(freshSalon.id, serviceData);
+    }
+    refreshData();
+    resetServiceForm();
   };
 
   const resetServiceForm = () => { 
@@ -217,10 +188,10 @@ const OwnerHome: React.FC<OwnerHomeProps> = ({ user: initialUser, onLogout }) =>
   };
 
   const handleDeleteService = (id: string) => { 
-    const currentSalon = salon || getSalonByOwner(user.id);
-    if (!currentSalon) return; 
+    const freshSalon = getSalonByOwner(user.id);
+    if (!freshSalon) return; 
     if (confirm('আপনি কি এই সার্ভিসটি ডিলিট করতে চান?')) { 
-      deleteService(currentSalon.id, id); 
+      deleteService(freshSalon.id, id); refreshData(); 
     } 
   };
 
@@ -230,8 +201,11 @@ const OwnerHome: React.FC<OwnerHomeProps> = ({ user: initialUser, onLogout }) =>
       setIsCompressing(true);
       const reader = new FileReader(); 
       reader.onloadend = async () => {
-        const compressed = await compressImage(reader.result as string);
-        setServiceImage(compressed);
+        const result = reader.result;
+        if (typeof result === 'string') {
+          const compressed = await compressImage(result);
+          setServiceImage(compressed);
+        }
         setIsCompressing(false);
       };
       reader.readAsDataURL(file); 
@@ -244,8 +218,11 @@ const OwnerHome: React.FC<OwnerHomeProps> = ({ user: initialUser, onLogout }) =>
       setIsCompressing(true);
       const reader = new FileReader(); 
       reader.onloadend = async () => {
-        const compressed = await compressImage(reader.result as string);
-        setEditOwnerAvatar(compressed);
+        const result = reader.result;
+        if (typeof result === 'string') {
+          const compressed = await compressImage(result);
+          setEditOwnerAvatar(compressed);
+        }
         setIsCompressing(false);
       };
       reader.readAsDataURL(file); 
@@ -258,8 +235,11 @@ const OwnerHome: React.FC<OwnerHomeProps> = ({ user: initialUser, onLogout }) =>
       setIsCompressing(true);
       const reader = new FileReader(); 
       reader.onloadend = async () => {
-        const compressed = await compressImage(reader.result as string, 800, 450); 
-        setSalonImage(compressed);
+        const result = reader.result;
+        if (typeof result === 'string') {
+          const compressed = await compressImage(result, 800, 450); 
+          setSalonImage(compressed);
+        }
         setIsCompressing(false);
       };
       reader.readAsDataURL(file); 
@@ -280,8 +260,11 @@ const OwnerHome: React.FC<OwnerHomeProps> = ({ user: initialUser, onLogout }) =>
         if (!(file instanceof Blob)) return;
         const reader = new FileReader();
         reader.onloadend = async () => {
-          const compressed = await compressImage(reader.result as string, 600, 800);
-          newPortfolio.push(compressed);
+          const result = reader.result;
+          if (typeof result === 'string') {
+            const compressed = await compressImage(result, 600, 800);
+            newPortfolio.push(compressed);
+          }
           processed++;
           if (processed === files.length) {
             setSalonPortfolio(newPortfolio);
@@ -296,43 +279,6 @@ const OwnerHome: React.FC<OwnerHomeProps> = ({ user: initialUser, onLogout }) =>
   const removePortfolioImage = (idx: number) => {
     setSalonPortfolio(prev => prev.filter((_, i) => i !== idx));
   };
-
-  if (isInitializing) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-8">
-        <div className="w-16 h-16 border-4 border-amber-500 border-t-transparent rounded-full animate-spin mb-8"></div>
-        <h2 className="text-2xl font-black text-white text-center">আপনার প্রোফাইল লোড হচ্ছে...</h2>
-      </div>
-    );
-  }
-
-  // If after initialization salon is still not found, show setup UI
-  if (!salon) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-12 text-center space-y-8">
-        <div className="w-24 h-24 bg-amber-500/10 rounded-[32px] flex items-center justify-center border border-amber-500/20 shadow-lg">
-           <svg className="w-12 h-12 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
-        </div>
-        <div>
-           <h2 className="text-3xl font-black text-white mb-2">সেলুন সেটআপ করুন</h2>
-           <p className="text-slate-500 max-w-xs mx-auto">আপনার সেলুনটি এখনো সিস্টেমে নিবন্ধিত হয়নি। সার্ভিস শুরু করতে নিচের বাটনে ক্লিক করুন।</p>
-        </div>
-        <button 
-          onClick={async () => {
-            setIsInitializing(true);
-            await ensureSalonExists(user);
-            await fetchAll();
-            refreshData();
-            setIsInitializing(false);
-          }}
-          className="bg-amber-500 text-slate-950 font-black py-5 px-10 rounded-3xl shadow-xl active:scale-95 transition-all uppercase tracking-widest text-sm"
-        >
-          সেলুন প্রোফাইল তৈরি করুন
-        </button>
-        <button onClick={onLogout} className="text-slate-600 font-bold text-xs uppercase tracking-widest">লগআউট</button>
-      </div>
-    );
-  }
 
   const renderAppInfo = () => (
     <div className="fixed inset-0 z-[100] bg-slate-950/40 backdrop-blur-xl animate-in fade-in duration-300">
@@ -387,19 +333,43 @@ const OwnerHome: React.FC<OwnerHomeProps> = ({ user: initialUser, onLogout }) =>
     <div className="space-y-8 animate-in fade-in duration-500">
       {paymentStatus.isSuspended && (
         <div className="bg-red-500/10 border border-red-500/20 p-6 rounded-[32px] flex items-center gap-5 animate-pulse">
-           <div className="w-14 h-14 bg-red-500 rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-red-500/20"><svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg></div>
-           <div><h3 className="text-red-500 font-black uppercase tracking-tight text-sm">আপনার সেলুনটি বন্ধ (Suspended) আছে!</h3><p className="text-red-400/70 text-xs font-bold leading-relaxed">১৫ তারিখের মধ্যে কমিশন পরিশোধ না করায় এটি বন্ধ করা হয়েছে।</p></div>
+           <div className="w-14 h-14 bg-red-500 rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-red-500/20">
+              <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+           </div>
+           <div>
+              <h3 className="text-red-500 font-black uppercase tracking-tight text-sm">আপনার সেলুনটি বন্ধ (Suspended) আছে!</h3>
+              <p className="text-red-400/70 text-xs font-bold leading-relaxed">১৫ তারিখের মধ্যে কমিশন পরিশোধ না করায় এটি বন্ধ করা হয়েছে।</p>
+           </div>
         </div>
       )}
+
       <div className="flex justify-between items-end">
-        <div><h2 className="text-3xl font-bold text-white tracking-tight">ড্যাশবোর্ড</h2><p className="text-slate-500 text-sm">আপনার সেলুনের আপডেট</p></div>
-        <div className="bg-amber-500/10 border border-amber-500/20 px-4 py-2 rounded-2xl text-amber-500 font-bold text-xs">{new Date().toLocaleDateString('bn-BD', { day: 'numeric', month: 'long' })}</div>
+        <div>
+          <h2 className="text-3xl font-bold text-white tracking-tight">ড্যাশবোর্ড</h2>
+          <p className="text-slate-500 text-sm">আপনার সেলুনের আপডেট</p>
+        </div>
+        <div className="bg-amber-500/10 border border-amber-500/20 px-4 py-2 rounded-2xl text-amber-500 font-bold text-xs">
+          {new Date().toLocaleDateString('bn-BD', { day: 'numeric', month: 'long' })}
+        </div>
       </div>
+
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-gradient-to-br from-indigo-600 to-purple-700 p-6 rounded-[32px] shadow-xl"><p className="text-indigo-100 text-[10px] font-black uppercase tracking-widest mb-1">মোট আয়</p><p className="text-2xl font-black text-white">৳ {stats.totalEarnings}</p></div>
-        <div className="bg-gradient-to-br from-blue-600 to-cyan-700 p-6 rounded-[32px] shadow-xl"><p className="text-blue-100 text-[10px] font-black uppercase tracking-widest mb-1">আজকের বুকিং</p><p className="text-2xl font-black text-white">{stats.todayCount} টি</p></div>
-        <div className="bg-gradient-to-br from-amber-500 to-orange-600 p-6 rounded-[32px] shadow-xl"><p className="text-amber-100 text-[10px] font-black uppercase tracking-widest mb-1">পেন্ডিং</p><p className="text-2xl font-black text-white">{stats.pendingCount} টি</p></div>
-        <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-6 rounded-[32px] shadow-xl"><p className="text-emerald-100 text-[10px] font-black uppercase tracking-widest mb-1">গৃহীত</p><p className="text-2xl font-black text-white">{stats.acceptedCount} টি</p></div>
+        <div className="bg-gradient-to-br from-indigo-600 to-purple-700 p-6 rounded-[32px] shadow-xl">
+          <p className="text-indigo-100 text-[10px] font-black uppercase tracking-widest mb-1">মোট আয়</p>
+          <p className="text-2xl font-black text-white">৳ {stats.totalEarnings}</p>
+        </div>
+        <div className="bg-gradient-to-br from-blue-600 to-cyan-700 p-6 rounded-[32px] shadow-xl">
+          <p className="text-blue-100 text-[10px] font-black uppercase tracking-widest mb-1">আজকের বুকিং</p>
+          <p className="text-2xl font-black text-white">{stats.todayCount} টি</p>
+        </div>
+        <div className="bg-gradient-to-br from-amber-500 to-orange-600 p-6 rounded-[32px] shadow-xl">
+          <p className="text-amber-100 text-[10px] font-black uppercase tracking-widest mb-1">পেন্ডিং</p>
+          <p className="text-2xl font-black text-white">{stats.pendingCount} টি</p>
+        </div>
+        <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-6 rounded-[32px] shadow-xl">
+          <p className="text-emerald-100 text-[10px] font-black uppercase tracking-widest mb-1">গৃহীত</p>
+          <p className="text-2xl font-black text-white">{stats.acceptedCount} টি</p>
+        </div>
       </div>
     </div>
   );
@@ -408,24 +378,35 @@ const OwnerHome: React.FC<OwnerHomeProps> = ({ user: initialUser, onLogout }) =>
     <div className="space-y-8 pb-32 animate-in slide-in-from-right-4 duration-500">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-white tracking-tight">সার্ভিসসমূহ</h2>
-        <button onClick={() => { resetServiceForm(); setShowServiceForm(true); }} className="bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 px-6 py-3 rounded-2xl font-black text-xs flex items-center gap-2 active:scale-95 transition-all shadow-xl uppercase tracking-widest"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 4v16m8-8H4" /></svg>সার্ভিস যোগ</button>
+        <button onClick={() => { resetServiceForm(); setShowServiceForm(true); }} className="bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 px-6 py-3 rounded-2xl font-black text-xs flex items-center gap-2 active:scale-95 transition-all shadow-xl uppercase tracking-widest">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 4v16m8-8H4" /></svg>সার্ভিস যোগ
+        </button>
       </div>
+      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {salon?.services?.map(s => (
           <div key={s.id} className="bg-slate-900 border border-slate-800 p-5 rounded-[32px] flex items-center gap-5 relative group hover:border-amber-500/30 transition-all">
-            <div className="w-20 h-20 rounded-2xl overflow-hidden border border-slate-800 shrink-0"><img src={s.image} alt={s.name} className="w-full h-full object-cover" /></div>
-            <div className="flex-1 min-w-0"><h3 className="font-black text-white text-base truncate">{s.name}</h3><p className="text-amber-500 font-black text-lg">৳ {s.price}</p></div>
+            <div className="w-20 h-20 rounded-2xl overflow-hidden border border-slate-800 shrink-0">
+              <img src={s.image} alt={s.name} className="w-full h-full object-cover" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-black text-white text-base truncate">{s.name}</h3>
+              <p className="text-amber-500 font-black text-lg">৳ {s.price}</p>
+            </div>
             <div className="flex flex-col gap-2">
               <button onClick={() => startEditService(s)} className="w-10 h-10 bg-slate-800 hover:text-amber-500 text-slate-400 rounded-xl flex items-center justify-center transition-all"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>
               <button onClick={() => handleDeleteService(s.id)} className="w-10 h-10 bg-slate-800 hover:text-red-500 text-slate-400 rounded-xl flex items-center justify-center transition-all"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>
             </div>
           </div>
         ))}
-        {salon?.services?.length === 0 && (<div className="col-span-full py-12 text-center opacity-30"><p className="text-slate-500 font-bold uppercase text-[10px] tracking-widest">এখনো কোনো সার্ভিস যোগ করা হয়নি</p></div>)}
       </div>
+
       {showServiceForm && (
         <div className="fixed inset-0 bg-slate-950/95 backdrop-blur-2xl z-[100] flex flex-col p-8 animate-in fade-in zoom-in duration-300">
-           <div className="flex justify-between items-center mb-12"><h2 className="text-3xl font-black text-white tracking-tight">{editingService ? 'সার্ভিস আপডেট' : 'নতুন সার্ভিস'}</h2><button onClick={resetServiceForm} className="w-14 h-14 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-center text-slate-400 active:scale-90 transition-all"><svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg></button></div>
+           <div className="flex justify-between items-center mb-12">
+              <h2 className="text-3xl font-black text-white tracking-tight">{editingService ? 'সার্ভিস আপডেট' : 'নতুন সার্ভিস'}</h2>
+              <button onClick={resetServiceForm} className="w-14 h-14 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-center text-slate-400 active:scale-90 transition-all"><svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg></button>
+           </div>
            <form onSubmit={handleServiceFormSubmit} className="space-y-8 flex-1 overflow-y-auto pb-10">
               <div className="space-y-2"><label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">সার্ভিস এর নাম</label><input type="text" value={serviceName} onChange={e => setServiceName(e.target.value)} placeholder="যেমন: হেয়ার কাট" className="w-full bg-slate-900 border border-slate-800 rounded-2xl py-5 px-6 text-white focus:ring-2 focus:ring-amber-500/50 outline-none" /></div>
               <div className="grid grid-cols-2 gap-6">
@@ -434,7 +415,9 @@ const OwnerHome: React.FC<OwnerHomeProps> = ({ user: initialUser, onLogout }) =>
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">সার্ভিস ছবি</label>
-                <div onClick={() => fileInputRef.current?.click()} className="w-full aspect-video bg-slate-900 border-2 border-dashed border-slate-800 rounded-[32px] flex flex-col items-center justify-center cursor-pointer overflow-hidden relative">{isCompressing ? <div className="animate-spin rounded-full h-8 w-8 border-2 border-amber-500 border-t-transparent"></div> : (serviceImage ? <img src={serviceImage} className="w-full h-full object-cover" alt="Service" /> : <p className="text-slate-700 font-black uppercase text-[10px]">ছবি পছন্দ করুন</p>)}</div>
+                <div onClick={() => fileInputRef.current?.click()} className="w-full aspect-video bg-slate-900 border-2 border-dashed border-slate-800 rounded-[32px] flex flex-col items-center justify-center cursor-pointer overflow-hidden relative">
+                  {isCompressing ? <div className="animate-spin rounded-full h-8 w-8 border-2 border-amber-500 border-t-transparent"></div> : (serviceImage ? <img src={serviceImage} className="w-full h-full object-cover" alt="Service" /> : <p className="text-slate-700 font-black uppercase text-[10px]">ছবি পছন্দ করুন</p>)}
+                </div>
                 <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
               </div>
               <div className="pt-8"><button type="submit" className="w-full bg-gradient-to-r from-amber-400 to-amber-600 text-slate-950 font-black py-6 rounded-3xl text-lg shadow-2xl uppercase tracking-widest">{editingService ? 'আপডেট করুন' : 'যোগ করুন'}</button></div>
@@ -455,7 +438,7 @@ const OwnerHome: React.FC<OwnerHomeProps> = ({ user: initialUser, onLogout }) =>
               <div key={b.id} className="bg-slate-900 border border-slate-800 p-6 rounded-[32px] shadow-xl">
                 <div className="flex justify-between items-start mb-6">
                   <div className="flex gap-4">
-                    <div className="w-14 h-14 bg-slate-800 rounded-2xl flex items-center justify-center text-amber-500 text-xl font-black border border-slate-700/50 overflow-hidden">{customer?.avatar ? <img src={customer.avatar} className="w-full h-full object-cover" alt="User" /> : (customer?.name?.charAt(0) || '?')}</div>
+                    <div className="w-14 h-14 bg-slate-800 rounded-2xl flex items-center justify-center text-amber-500 text-xl font-black border border-slate-700/50 overflow-hidden">{customer?.avatar ? <img src={customer.avatar} className="w-full h-full object-cover" alt="User" /> : customer?.name.charAt(0)}</div>
                     <div><h3 className="font-black text-white text-lg leading-tight">{customer?.name}</h3><p className="text-slate-500 text-xs font-bold mt-1 tracking-wider">+880 {customer?.phone}</p></div>
                   </div>
                   <span className={`px-4 py-1.5 rounded-full text-[9px] font-black border uppercase tracking-widest ${b.status === 'PENDING' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : b.status === 'CONFIRMED' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : b.status === 'REJECTED' ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-blue-500/10 text-blue-400 border-blue-500/20'}`}>{b.status}</span>
@@ -468,7 +451,7 @@ const OwnerHome: React.FC<OwnerHomeProps> = ({ user: initialUser, onLogout }) =>
                   {b.status === 'PENDING' && (
                     <div className="grid grid-cols-2 gap-4"><button onClick={() => handleUpdateStatus(b.id, 'REJECTED')} className="bg-red-500/10 text-red-500 font-black py-4 rounded-2xl border border-red-500/20 text-[10px] uppercase tracking-widest active:scale-95 transition-all">বাতিল</button><button onClick={() => handleUpdateStatus(b.id, 'CONFIRMED')} className="bg-emerald-500 text-slate-950 font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest active:scale-95 transition-all">গ্রহণ</button></div>
                   )}
-                  {b.status === 'CONFIRMED' && <button onClick={() => updateBookingStatus(b.id, 'COMPLETED')} className="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest active:scale-95 transition-all">সম্পন্ন</button>}
+                  {b.status === 'CONFIRMED' && <button onClick={() => handleUpdateStatus(b.id, 'COMPLETED')} className="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest active:scale-95 transition-all">সম্পন্ন</button>}
                 </div>
               </div>
             );
@@ -621,50 +604,156 @@ const OwnerHome: React.FC<OwnerHomeProps> = ({ user: initialUser, onLogout }) =>
   const renderSettings = () => (
     <div className="space-y-12 pb-32 animate-in fade-in duration-500">
       <h2 className="text-2xl font-bold text-white tracking-tight">সেটিংস ও প্রোফাইল</h2>
+      
+      {/* ওনার প্রোফাইল */}
       <section className="bg-slate-900/60 p-8 rounded-[48px] border border-slate-800 space-y-8 shadow-2xl">
           <div className="flex flex-col items-center">
             <div className="relative group">
               <div className="w-32 h-32 rounded-[40px] overflow-hidden border-4 border-slate-800 shadow-2xl relative">
-                {isCompressing ? <div className="w-full h-full flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-2 border-amber-500 border-t-transparent"></div></div> : (editOwnerAvatar ? <img src={editOwnerAvatar} className="w-full h-full object-cover" alt="Avatar" /> : <div className="w-full h-full bg-slate-950 flex items-center justify-center text-slate-700 font-black text-3xl">{user.name?.charAt(0) || '?'}</div>)}
-                <div onClick={() => ownerAvatarRef.current?.click()} className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer backdrop-blur-sm"><span className="text-white font-black text-[10px] uppercase tracking-widest">পরিবর্তন</span></div>
+                {isCompressing ? <div className="w-full h-full flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-2 border-amber-500 border-t-transparent"></div></div> : (editOwnerAvatar ? <img src={editOwnerAvatar} className="w-full h-full object-cover" alt="Avatar" /> : <div className="w-full h-full bg-slate-950 flex items-center justify-center text-slate-700">O</div>)}
+                <div onClick={() => ownerAvatarRef.current?.click()} className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer backdrop-blur-sm">
+                  <span className="text-white font-black text-[10px] uppercase tracking-widest">পরিবর্তন</span>
+                </div>
               </div>
               <input type="file" ref={ownerAvatarRef} onChange={handleOwnerAvatarUpload} className="hidden" accept="image/*" />
             </div>
           </div>
           <div className="space-y-6">
             <div className="space-y-2"><label className="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">আপনার নাম</label><input type="text" value={editOwnerName} onChange={e => setEditOwnerName(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-4 px-6 text-white outline-none font-bold" /></div>
-            <button onClick={handleSaveProfile} disabled={isSavingProfile || isCompressing} className="w-full bg-slate-100 text-slate-950 font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50">{isSavingProfile ? (<><div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div>সেভ হচ্ছে...</>) : 'প্রোফাইল সেভ করুন'}</button>
+            <button 
+              onClick={handleSaveProfile} 
+              disabled={isSavingProfile || isCompressing}
+              className="w-full bg-slate-100 text-slate-950 font-black py-4 rounded-2xl text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 disabled:opacity-50"
+            >
+              {isSavingProfile ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin"></div>
+                  সেভ হচ্ছে...
+                </>
+              ) : 'প্রোফাইল সেভ করুন'}
+            </button>
           </div>
       </section>
 
+      {/* সেলুন মৌলিক তথ্য */}
       <section className="bg-slate-900/50 p-8 rounded-[48px] border border-slate-800 space-y-8 shadow-2xl">
           <h3 className="text-white font-black text-sm uppercase tracking-widest ml-1">সেলুন প্রোফাইল এডিট</h3>
+          
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">সেলুন কভার ফটো</label>
-            <div onClick={() => salonCoverRef.current?.click()} className="w-full aspect-video rounded-[32px] overflow-hidden border-2 border-dashed border-slate-800 flex items-center justify-center bg-slate-950/40 cursor-pointer transition-all">{isCompressing ? <div className="animate-spin h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full"></div> : (salonImage ? <img src={salonImage} className="w-full h-full object-cover" alt="Cover" /> : <p className="text-slate-700 font-black uppercase text-[10px]">কভার ফটো আপলোড</p>)}</div>
+            <div onClick={() => salonCoverRef.current?.click()} className="w-full aspect-video rounded-[32px] overflow-hidden border-2 border-dashed border-slate-800 flex items-center justify-center bg-slate-950/40 cursor-pointer transition-all">
+              {isCompressing ? <div className="animate-spin h-8 w-8 border-2 border-amber-500 border-t-transparent rounded-full"></div> : (salonImage ? <img src={salonImage} className="w-full h-full object-cover" alt="Cover" /> : <p className="text-slate-700 font-black uppercase text-[10px]">কভার ফটো আপলোড</p>)}
+            </div>
             <input type="file" ref={salonCoverRef} onChange={handleSalonCoverUpload} className="hidden" accept="image/*" />
           </div>
-          <div className="space-y-2"><label className="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">সেলুন এর নাম</label><input type="text" value={editSalonName} onChange={e => setEditSalonName(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-4 px-6 text-white outline-none font-bold" /></div>
-          <div className="space-y-2"><label className="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">সংক্ষিপ্ত বিবরণ (Bio)</label><textarea value={editSalonDescription} onChange={e => setEditSalonDescription(e.target.value)} placeholder="আপনার সেলুন সম্পর্কে কিছু লিখুন..." className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-4 px-6 text-white outline-none font-medium text-sm h-32 resize-none" /></div>
-          <div className="space-y-2"><label className="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">ঠিকানা (বিস্তারিত)</label><input type="text" value={editSalonLocation} onChange={e => setEditSalonLocation(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-4 px-6 text-white outline-none font-bold" /></div>
-          <div className="space-y-2"><label className="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">গুগল ম্যাপ লিংক</label><input type="text" value={editMapLink} onChange={e => setEditMapLink(e.target.value)} placeholder="https://maps.app.goo.gl/..." className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-4 px-6 text-white outline-none font-medium text-xs" /></div>
-          <div className="grid grid-cols-2 gap-4">
-             <div className="space-y-2"><label className="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">খোলে</label><input type="text" value={editOpeningTime} onChange={e => setEditOpeningTime(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-4 px-6 text-white outline-none font-bold text-center" /></div>
-             <div className="space-y-2"><label className="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">বন্ধ হয়</label><input type="text" value={editClosingTime} onChange={e => setEditClosingTime(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-4 px-6 text-white outline-none font-bold text-center" /></div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">সেলুন এর নাম</label>
+            <input type="text" value={editSalonName} onChange={e => setEditSalonName(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-4 px-6 text-white outline-none font-bold" />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">সংক্ষিপ্ত বিবরণ (Bio)</label>
+            <textarea value={editSalonDescription} onChange={e => setEditSalonDescription(e.target.value)} placeholder="আপনার সেলুন সম্পর্কে কিছু লিখুন..." className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-4 px-6 text-white outline-none font-medium text-sm h-32 resize-none" />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">ঠিকানা (বিস্তারিত)</label>
+            <input type="text" value={editSalonLocation} onChange={e => setEditSalonLocation(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-4 px-6 text-white outline-none font-bold" />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">গুগল ম্যাপ লিংক</label>
+            <div className="relative">
+              <input type="text" value={editMapLink} onChange={e => setEditMapLink(e.target.value)} placeholder="https://maps.app.goo.gl/..." className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-4 pl-12 pr-6 text-white outline-none font-medium text-xs" />
+              <svg className="absolute left-4 top-4 w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            </div>
           </div>
       </section>
 
+      {/* ব্যবসার সময় */}
       <section className="bg-slate-900/50 p-8 rounded-[48px] border border-slate-800 space-y-6">
-          <div className="flex justify-between items-center px-1"><h3 className="text-white font-black text-sm uppercase tracking-widest">লুকবুক (Portfolio)</h3><span className="text-slate-500 text-[10px] font-black uppercase tracking-widest">{salonPortfolio.length} / ১০</span></div>
+          <h3 className="text-white font-black text-sm uppercase tracking-widest ml-1">ব্যবসার সময়</h3>
+          <div className="grid grid-cols-2 gap-4">
+             <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">খোলে</label>
+                <input type="text" value={editOpeningTime} onChange={e => setEditOpeningTime(e.target.value)} placeholder="10:00 AM" className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-4 px-6 text-white outline-none font-bold text-center" />
+             </div>
+             <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest ml-1">বন্ধ হয়</label>
+                <input type="text" value={editClosingTime} onChange={e => setEditClosingTime(e.target.value)} placeholder="10:00 PM" className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-4 px-6 text-white outline-none font-bold text-center" />
+             </div>
+          </div>
+      </section>
+
+      {/* সোশ্যাল মিডিয়া */}
+      <section className="bg-slate-900/50 p-8 rounded-[48px] border border-slate-800 space-y-8">
+          <h3 className="text-white font-black text-sm uppercase tracking-widest ml-1">সোশ্যাল মিডিয়া লিংক</h3>
+          
+          <div className="space-y-4">
+             <div className="relative group">
+                <div className="absolute left-4 top-4 w-6 h-6 flex items-center justify-center">
+                   <svg className="w-5 h-5 text-[#1877F2]" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                </div>
+                <input type="text" value={editFB} onChange={e => setEditFB(e.target.value)} placeholder="ফেসবুক পেজ লিংক" className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-4 pl-14 pr-6 text-white outline-none font-medium text-xs focus:border-[#1877F2]/50" />
+             </div>
+
+             <div className="relative group">
+                <div className="absolute left-4 top-4 w-6 h-6 flex items-center justify-center">
+                   <svg className="w-5 h-5 text-[#ee2a7b]" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                </div>
+                <input type="text" value={editInsta} onChange={e => setEditInsta(e.target.value)} placeholder="ইনস্টাগ্রাম ইউজারনেম" className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-4 pl-14 pr-6 text-white outline-none font-medium text-xs focus:border-[#ee2a7b]/50" />
+             </div>
+
+             <div className="relative group">
+                <div className="absolute left-4 top-4 w-6 h-6 flex items-center justify-center">
+                   <svg className="w-5 h-5 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                </div>
+                <input type="text" value={editWA} onChange={e => setEditWA(e.target.value)} placeholder="হোয়াটসঅ্যাপ নাম্বার" className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-4 pl-14 pr-6 text-white outline-none font-medium text-xs focus:border-[#25D366]/50" />
+             </div>
+          </div>
+      </section>
+
+      {/* লুকবুক পোর্টফোলিও */}
+      <section className="bg-slate-900/50 p-8 rounded-[48px] border border-slate-800 space-y-6">
+          <div className="flex justify-between items-center px-1">
+             <h3 className="text-white font-black text-sm uppercase tracking-widest">লুকবুক (Portfolio)</h3>
+             <span className="text-slate-500 text-[10px] font-black uppercase tracking-widest">{salonPortfolio.length} / ১০</span>
+          </div>
+
           <div className="grid grid-cols-3 gap-3">
-             {salonPortfolio.map((img, idx) => (<div key={idx} className="relative aspect-square rounded-2xl overflow-hidden border border-white/5 group"><img src={img} className="w-full h-full object-cover" alt="Portfolio" /><button onClick={() => removePortfolioImage(idx)} className="absolute top-1 right-1 w-6 h-6 bg-red-600 text-white rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all active:scale-90"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg></button></div>))}
-             {salonPortfolio.length < 10 && (<button onClick={() => portfolioInputRef.current?.click()} className="aspect-square bg-slate-950/40 border-2 border-dashed border-slate-800 rounded-2xl flex flex-col items-center justify-center text-slate-700 hover:text-amber-500 transition-all"><svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" /></svg><span className="text-[8px] font-black uppercase">ছবি যোগ</span></button>)}
+             {salonPortfolio.map((img, idx) => (
+               <div key={idx} className="relative aspect-square rounded-2xl overflow-hidden border border-white/5 group">
+                  <img src={img} className="w-full h-full object-cover" alt="Portfolio" />
+                  <button onClick={() => removePortfolioImage(idx)} className="absolute top-1 right-1 w-6 h-6 bg-red-600 text-white rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all active:scale-90"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg></button>
+               </div>
+             ))}
+             {salonPortfolio.length < 10 && (
+                <button onClick={() => portfolioInputRef.current?.click()} className="aspect-square bg-slate-950/40 border-2 border-dashed border-slate-800 rounded-2xl flex flex-col items-center justify-center text-slate-700 hover:text-amber-500 transition-all"><svg className="w-6 h-6 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" /></svg><span className="text-[8px] font-black uppercase">ছবি যোগ</span></button>
+             )}
           </div>
           <input type="file" ref={portfolioInputRef} onChange={handlePortfolioUpload} className="hidden" accept="image/*" multiple />
       </section>
 
-      <section className="px-6"><button onClick={handleSaveSalonSettings} disabled={isSavingSalon || isCompressing || !salon} className="w-full bg-gradient-to-r from-amber-400 to-amber-600 text-slate-950 font-black py-5 rounded-3xl uppercase tracking-widest text-[11px] shadow-2xl active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50">{isSavingSalon ? (<><div className="w-5 h-5 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>সেভ হচ্ছে...</>) : 'সমস্ত তথ্য সেভ করুন'}</button></section>
-      <div className="px-6"><button onClick={onLogout} className="w-full bg-red-600/10 border border-red-600/20 text-red-500 font-black py-5 rounded-[32px] flex items-center justify-center gap-3 active:scale-95 transition-all text-[10px] uppercase tracking-widest">লগআউট করুন</button></div>
+      {/* সেভ বাটন */}
+      <section className="px-6">
+          <button 
+            onClick={handleSaveSalonSettings} 
+            disabled={isSavingSalon || isCompressing} 
+            className="w-full bg-gradient-to-r from-amber-400 to-amber-600 text-slate-950 font-black py-5 rounded-3xl uppercase tracking-widest text-[11px] shadow-2xl shadow-amber-900/40 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+          >
+            {isSavingSalon ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></div>
+                  সেভ হচ্ছে...
+                </>
+              ) : 'সমস্ত তথ্য সেভ করুন'}
+          </button>
+      </section>
+
+      <div className="px-6">
+        <button onClick={onLogout} className="w-full bg-red-600/10 border border-red-600/20 text-red-500 font-black py-5 rounded-[32px] flex items-center justify-center gap-3 active:scale-95 transition-all text-[10px] uppercase tracking-widest">লগআউট করুন</button>
+      </div>
     </div>
   );
 
@@ -686,7 +775,7 @@ const OwnerHome: React.FC<OwnerHomeProps> = ({ user: initialUser, onLogout }) =>
              {unreadCount > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-600 rounded-full text-[8px] flex items-center justify-center text-white">{unreadCount}</span>}
           </button>
           <div onClick={() => setActiveTab('SETTINGS')} className="w-10 h-10 rounded-xl overflow-hidden border-2 border-slate-800 cursor-pointer active:scale-90 transition-all">
-            {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" alt="User" /> : <div className="w-full h-full bg-slate-900 flex items-center justify-center text-slate-500 font-bold">{user.name?.charAt(0) || '?'}</div>}
+            {user.avatar ? <img src={user.avatar} className="w-full h-full object-cover" alt="User" /> : <div className="w-full h-full bg-slate-900 flex items-center justify-center text-slate-500">{user.name.charAt(0)}</div>}
           </div>
         </div>
       </header>
@@ -740,14 +829,9 @@ const OwnerHome: React.FC<OwnerHomeProps> = ({ user: initialUser, onLogout }) =>
           { id: 'PAYMENTS', label: 'পেমেন্ট', icon: <path d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /> },
           { id: 'SETTINGS', label: 'সেটিংস', icon: <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /> }
         ].map(nav => (
-          <button key={nav.id} onClick={() => setActiveTab(nav.id as Tab)} className={`flex flex-col items-center gap-1 transition-all flex-1 relative ${activeTab === nav.id ? 'text-amber-400' : 'text-slate-600'}`}>
+          <button key={nav.id} onClick={() => setActiveTab(nav.id as Tab)} className={`flex flex-col items-center gap-1 transition-all flex-1 ${activeTab === nav.id ? 'text-amber-400' : 'text-slate-600'}`}>
             <div className={`w-12 h-10 rounded-2xl flex items-center justify-center ${activeTab === nav.id ? 'bg-amber-400/10' : ''}`}><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">{nav.icon}</svg></div>
             <span className="text-[9px] font-black uppercase tracking-widest">{nav.label}</span>
-            {nav.id === 'BOOKINGS' && pendingBookingsCount > 0 && (
-              <span className="absolute top-1 right-2 w-4 h-4 bg-red-600 rounded-full text-[8px] flex items-center justify-center text-white border border-slate-950 font-black animate-in zoom-in duration-300">
-                {pendingBookingsCount}
-              </span>
-            )}
           </button>
         ))}
       </nav>

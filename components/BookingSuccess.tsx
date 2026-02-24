@@ -42,7 +42,7 @@ const BookingSuccess: React.FC<BookingSuccessProps> = ({ salon, booking, service
 
       <div className="bg-slate-900/50 p-6 rounded-[32px] border border-slate-800/50 w-full max-w-sm shadow-inner">
          <p className="text-slate-600 text-[9px] font-black uppercase tracking-[0.2em] mb-3">বুকিং রেফারেন্স আইডি</p>
-         <p className="text-amber-500/80 font-mono text-base bg-slate-950/50 py-3 rounded-xl border border-white/5 uppercase">#{booking.id?.slice(-8) || '...'}</p>
+         <p className="text-amber-500/80 font-mono text-base bg-slate-950/50 py-3 rounded-xl border border-white/5 uppercase">#{booking.id.slice(-8)}</p>
       </div>
     </div>
   );
