@@ -44,24 +44,49 @@
 
     <!-- PREMIUM CENTERED PWA INSTALL MODAL -->
     <div id="pwa-install-overlay" class="hidden fixed inset-0 z-[10000] flex items-center justify-center p-6">
-        <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-md" onclick="closePwaOverlay()"></div>
-        <div class="glass-premium w-full max-w-sm p-10 rounded-[56px] relative animate-zoom-in text-center space-y-8">
-            <div class="flex justify-center">
-                <div class="w-24 h-24 bg-amber-500/10 rounded-[36px] flex items-center justify-center border border-amber-500/20 shadow-2xl">
-                    <img src="data:image/png;base64,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" class="w-16 h-16 drop-shadow-2xl" alt="Logo">
+        <div class="absolute inset-0 bg-slate-950/90 backdrop-blur-xl" onclick="closePwaOverlay()"></div>
+        <div class="glass-premium w-full max-w-sm p-10 rounded-[56px] relative animate-zoom-in text-center space-y-8 overflow-hidden">
+            <!-- Decorative background elements -->
+            <div class="absolute -top-24 -right-24 w-48 h-48 bg-amber-500/10 blur-[80px] rounded-full"></div>
+            <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-amber-500/5 blur-[80px] rounded-full"></div>
+            
+            <div class="flex justify-center relative">
+                <div class="w-28 h-28 bg-gradient-to-br from-amber-400/20 to-amber-600/5 rounded-[42px] flex items-center justify-center border border-amber-500/30 shadow-[0_0_50px_rgba(251,191,36,0.15)]">
+                    <img src="data:image/png;base64,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" class="w-20 h-20 drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]" alt="Logo">
                 </div>
             </div>
-            <div class="space-y-4">
+            <div class="space-y-4 relative">
                 <h2 class="text-3xl font-black gradient-gold tracking-tight leading-tight">Smart Salon অ্যাপটি ইন্সটল করুন</h2>
-                <p class="text-slate-400 text-sm font-medium leading-relaxed">সেরা অভিজ্ঞতা এবং রিয়েল-টাইম বুকিং আপডেট পেতে অ্যাপটি আপনার হোম স্ক্রিনে যোগ করুন।</p>
+                <p class="text-slate-400 text-sm font-medium leading-relaxed px-2">সেরা অভিজ্ঞতা এবং রিয়েল-টাইম বুকিং আপডেট পেতে অ্যাপটি আপনার হোম স্ক্রিনে যোগ করুন।</p>
             </div>
-            <div class="space-y-4 pt-4">
-                <button onclick="handlePwaInstallClick()" class="w-full bg-gradient-to-r from-amber-400 to-amber-600 text-slate-950 font-black py-5 rounded-[24px] shadow-2xl active:scale-95 transition-all uppercase tracking-widest text-sm">
+            <div class="space-y-4 pt-4 relative">
+                <button id="pwa-install-btn" onclick="handlePwaInstallClick()" class="w-full bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 text-slate-950 font-black py-5 rounded-[24px] shadow-[0_20px_40px_rgba(245,158,11,0.2)] active:scale-95 transition-all uppercase tracking-[0.2em] text-xs">
                     এখনই ইন্সটল করুন
                 </button>
-                <button onclick="closePwaOverlay()" class="w-full text-slate-500 font-bold text-[10px] uppercase tracking-widest py-2 hover:text-slate-300">
+                <button onclick="closePwaOverlay()" class="w-full text-slate-500 font-bold text-[10px] uppercase tracking-[0.3em] py-2 hover:text-slate-300 transition-colors">
                     পরে করবো
                 </button>
+            </div>
+            
+            <!-- iOS Instructions (Hidden by default) -->
+            <div id="ios-instructions" class="hidden space-y-6 pt-2 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <div class="h-px bg-gradient-to-r from-transparent via-amber-500/20 to-transparent"></div>
+                <p class="text-amber-500/80 text-[10px] font-bold uppercase tracking-widest">iOS ব্যবহারকারীদের জন্য:</p>
+                <div class="flex items-center justify-center gap-6 text-slate-400">
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                        </div>
+                        <span class="text-[9px] font-bold uppercase tracking-tighter">১. শেয়ার চাপুন</span>
+                    </div>
+                    <svg class="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg>
+                    <div class="flex flex-col items-center gap-2">
+                        <div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
+                        </div>
+                        <span class="text-[9px] font-bold uppercase tracking-tighter">২. অ্যাড টু হোম স্ক্রিন</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -71,14 +96,9 @@
       // Service Worker registration with origin mismatch fix for sandbox environments
       async function registerSW() {
         if ('serviceWorker' in navigator) {
-          // Check if we are in a sandboxed usercontent.goog environment
-          if (window.location.hostname.includes('usercontent.goog')) {
-              console.log('Sandbox environment detected. Service Worker registration skipped to prevent Origin Mismatch error.');
-              return;
-          }
+          if (window.location.hostname.includes('usercontent.goog')) return;
 
           try {
-            // Using absolute path for Vercel/Production stability
             const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
             console.log('PWA Ready & Registered');
           } catch (err) {
@@ -88,19 +108,34 @@
       }
       registerSW();
 
-      // Reliable PWA Install Prompt Interception
       let deferredPrompt;
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+
+      // Show popup automatically after 1.5 seconds if not installed
+      window.addEventListener('load', () => {
+          setTimeout(() => {
+              if (!isStandalone) {
+                  const overlay = document.getElementById('pwa-install-overlay');
+                  if (overlay) {
+                      overlay.classList.remove('hidden');
+                      
+                      // If iOS, hide the install button and show instructions
+                      if (isIOS) {
+                          const btn = document.getElementById('pwa-install-btn');
+                          const instructions = document.getElementById('ios-instructions');
+                          if (btn) btn.classList.add('hidden');
+                          if (instructions) instructions.classList.remove('hidden');
+                      }
+                  }
+              }
+          }, 1500);
+      });
+
       window.addEventListener('beforeinstallprompt', (e) => {
-        // Prevent the default mini-infobar or browser bar
         e.preventDefault();
         deferredPrompt = e;
-        
-        // Show our high-end premium modal automatically if not already installed
-        if (!window.matchMedia('(display-mode: standalone)').matches) {
-            console.log('Smart Salon: Ready for PWA Installation');
-            const overlay = document.getElementById('pwa-install-overlay');
-            if (overlay) overlay.classList.remove('hidden');
-        }
+        console.log('Smart Salon: Ready for PWA Installation');
       });
 
       async function handlePwaInstallClick() {
@@ -110,6 +145,9 @@
             console.log(`User choice: ${outcome}`);
             deferredPrompt = null;
             closePwaOverlay();
+        } else if (!isIOS) {
+            // Fallback for browsers that don't support beforeinstallprompt but aren't iOS
+            alert('আপনার ব্রাউজারের মেনু থেকে "Install App" বা "Add to Home Screen" অপশনটি বেছে নিন।');
         }
       }
 
@@ -117,9 +155,6 @@
         const overlay = document.getElementById('pwa-install-overlay');
         if (overlay) overlay.classList.add('hidden');
       }
-
-      // OneSignal initialization (already configured in App.tsx but script bridge kept here)
-      window.OneSignalDeferred = window.OneSignalDeferred || [];
     </script>
 <script type="module" src="/index.tsx"></script>
 </body>
