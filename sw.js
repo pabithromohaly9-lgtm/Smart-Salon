@@ -1,17 +1,15 @@
-const CACHE_NAME = 'smart-salon-cache-v11';
-const OFFLINE_URL = './index.html';
+const CACHE_NAME = 'smart-salon-cache-v13';
+const OFFLINE_URL = '/index.html';
 
 const ASSETS_TO_CACHE = [
-  './',
-  './index.html',
-  './index.tsx',
-  './manifest.json'
+  '/',
+  '/index.html',
+  '/manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[SW] Pre-caching offline assets');
       return cache.addAll(ASSETS_TO_CACHE);
     })
   );
@@ -24,7 +22,6 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames.map((name) => {
           if (name !== CACHE_NAME) {
-            console.log('[SW] Removing old cache:', name);
             return caches.delete(name);
           }
         })

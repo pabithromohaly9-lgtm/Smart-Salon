@@ -103,9 +103,8 @@
       // Service Worker registration
       async function registerSW() {
         if ('serviceWorker' in navigator) {
-          if (window.location.hostname.includes('usercontent.goog')) return;
           try {
-            await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+            const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
             console.log('Smart Salon: PWA Core Ready');
           } catch (err) {
             console.warn('SW failed:', err.message);
@@ -152,7 +151,7 @@
             closePwaOverlay();
         } else if (!isIOS) {
             // If prompt is not ready yet, we tell them to use the browser menu
-            alert('আপনার ব্রাউজারটি সরাসরি ইন্সটল সাপোর্ট করছে না অথবা সিস্টেমটি প্রস্তুত হচ্ছে। দয়া করে ব্রাউজার মেনু থেকে "Install App" বা "Add to Home Screen" অপশনটি ব্যবহার করুন।');
+            alert('আপনার ব্রাউজারটি সরাসরি ইন্সটল সাপোর্ট করছে না অথবা সিস্টেমটি প্রস্তুত হচ্ছে। দয়া করে ব্রাউজার মেনু (তিনটি ডট) থেকে "Install App" বা "Add to Home Screen" অপশনটি ব্যবহার করুন।');
         }
       }
 
