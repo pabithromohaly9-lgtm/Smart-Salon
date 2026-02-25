@@ -163,7 +163,11 @@ export const loginUser = async (name: string, phone: string, role: UserRole, pin
     if (insertError) throw insertError;
     dbCache.currentUser = newUser;
     if (role === 'OWNER') {
-      await ensureSalonExists(newUser);
+      try {
+        await ensureSalonExists(newUser);
+      } catch (e) {
+        console.error('Salon Creation Error:', e);
+      }
     }
     await fetchAll();
     return newUser;
@@ -174,7 +178,7 @@ export const ensureSalonExists = async (user: User) => {
   if (user.role !== 'OWNER') return;
   const { data: salon } = await supabase.from('salons').select('id').eq('owner_id', user.id).maybeSingle();
   if (!salon) {
-    await supabase.from('salons').insert([{
+    const { error } = await supabase.from('salons').insert([{
       owner_id: user.id,
       owner_name: user.name,
       owner_photo: user.avatar || `https://i.pravatar.cc/150?u=${user.id}`,
@@ -184,8 +188,9 @@ export const ensureSalonExists = async (user: User) => {
       image: 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?q=80&w=800&auto=format&fit=crop',
       status: 'approved',
       is_active: true,
-      rating: 5.0
+      rating: 5
     }]);
+    if (error) throw error;
   }
 };
 

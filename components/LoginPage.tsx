@@ -88,13 +88,14 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onAdminTrigger }) => {
       await loginUser(name.trim(), phone.replace(/\D/g, ''), selectedRole!, pin);
       onLogin(selectedRole!);
     } catch (error: any) {
+      console.error('Auth Error:', error);
       if (error.message === 'INVALID_PIN') {
         alert('ভুল পিন! দয়া করে সঠিক পিন দিন।');
         setPin('');
       } else if (error.message === 'ADMIN_PHONE_RESERVED') {
         alert('এই নাম্বারটি শুধুমাত্র অ্যাডমিনের জন্য।');
       } else {
-        alert('সমস্যা হয়েছে, আবার চেষ্টা করুন।');
+        alert(`সমস্যা হয়েছে: ${error.message || 'আবার চেষ্টা করুন।'}`);
       }
     } finally {
       setIsLoading(false);

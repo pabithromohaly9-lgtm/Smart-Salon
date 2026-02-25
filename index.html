@@ -118,35 +118,29 @@
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
 
-      // Show popup ONLY when browser is ready for installation
-      window.addEventListener('beforeinstallprompt', (e) => {
-        e.preventDefault();
-        deferredPrompt = e;
-        
-        console.log('Smart Salon: Ready for PWA Installation');
-
-        if (!isStandalone) {
-            const overlay = document.getElementById('pwa-install-overlay');
-            if (overlay) {
-                setTimeout(() => {
-                    overlay.classList.remove('hidden');
-                }, 1500);
-            }
-        }
-      });
-
-      // iOS specific handling
+      // Force show popup after a short delay if not installed
       window.addEventListener('load', () => {
-          if (!isStandalone && isIOS) {
+          if (!isStandalone) {
               setTimeout(() => {
                   const overlay = document.getElementById('pwa-install-overlay');
                   if (overlay) {
                       overlay.classList.remove('hidden');
-                      document.getElementById('pwa-install-btn')?.classList.add('hidden');
-                      document.getElementById('ios-instructions')?.classList.remove('hidden');
+                      if (isIOS) {
+                          document.getElementById('pwa-install-btn')?.classList.add('hidden');
+                          document.getElementById('ios-instructions')?.classList.remove('hidden');
+                      }
                   }
-              }, 3000);
+              }, 2000);
           }
+      });
+
+      // Listen for the install prompt event
+      window.addEventListener('beforeinstallprompt', (e) => {
+        // Prevent the default mini-infobar
+        e.preventDefault();
+        // Stash the event so it can be triggered later.
+        deferredPrompt = e;
+        console.log('Smart Salon: Install Prompt Ready');
       });
 
       async function handlePwaInstallClick() {
@@ -157,8 +151,8 @@
             deferredPrompt = null;
             closePwaOverlay();
         } else if (!isIOS) {
-            // If prompt is not ready yet, we wait for it
-            console.log('Prompt not ready yet');
+            // If prompt is not ready yet, we tell them to use the browser menu
+            alert('আপনার ব্রাউজারটি সরাসরি ইন্সটল সাপোর্ট করছে না অথবা সিস্টেমটি প্রস্তুত হচ্ছে। দয়া করে ব্রাউজার মেনু থেকে "Install App" বা "Add to Home Screen" অপশনটি ব্যবহার করুন।');
         }
       }
 
