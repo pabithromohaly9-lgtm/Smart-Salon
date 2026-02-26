@@ -91,9 +91,12 @@
       let deferredPrompt;
       const overlay = document.getElementById('pwa-install-overlay');
 
+      // PWA Install Logic
       window.addEventListener('beforeinstallprompt', (e) => {
+        console.log("PWA Debug: beforeinstallprompt event fired");
         e.preventDefault();
         deferredPrompt = e;
+        // Show the premium modal
         overlay.classList.remove('hidden');
       });
 
@@ -101,7 +104,7 @@
         if (deferredPrompt) {
           deferredPrompt.prompt();
           const { outcome } = await deferredPrompt.userChoice;
-          console.log(`User choice: ${outcome}`);
+          console.log(`PWA Debug: Install choice outcome: ${outcome}`);
           deferredPrompt = null;
           closePwaOverlay();
         }
@@ -115,30 +118,36 @@
       async function registerSW() {
         if ('serviceWorker' in navigator) {
           try {
-            if (!localStorage.getItem('cache_cleared_v15')) {
+            // Force cache clear for v16
+            if (!localStorage.getItem('cache_cleared_v16')) {
               const cacheNames = await caches.keys();
               await Promise.all(cacheNames.map(name => caches.delete(name)));
-              localStorage.setItem('cache_cleared_v15', 'true');
+              localStorage.setItem('cache_cleared_v16', 'true');
               window.location.reload();
               return;
             }
             
             const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
-            console.log('Smart Salon: PWA Service Worker Ready');
+            console.log('PWA Debug: Service Worker Registered');
 
-            // Request permission and get token
-            const currentToken = await getToken(messaging, { 
-              serviceWorkerRegistration: registration,
-              vapidKey: "B..." // User might need to provide this
-            });
+            // FCM Setup
+            try {
+              const currentToken = await getToken(messaging, { 
+                serviceWorkerRegistration: registration,
+                vapidKey: "B..." // User might need to provide this
+              });
 
-            if (currentToken) {
-              console.log('FCM Token:', currentToken);
-              localStorage.setItem('fcm_token', currentToken);
-              window.dispatchEvent(new CustomEvent('fcm_token_received', { detail: currentToken }));
+              if (currentToken) {
+                console.log('FCM Token:', currentToken);
+                localStorage.setItem('fcm_token', currentToken);
+                window.dispatchEvent(new CustomEvent('fcm_token_received', { detail: currentToken }));
+              }
+            } catch (fcmErr) {
+              console.warn('FCM Token retrieval failed:', fcmErr);
             }
+
           } catch (err) {
-            console.warn('FCM Setup failed:', err);
+            console.error('PWA Debug: Service Worker registration failed:', err);
           }
         }
       }
