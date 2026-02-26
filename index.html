@@ -23,9 +23,6 @@
     <style>
         body { font-family: 'Hind Siliguri', sans-serif; background-color: #0a0e1a; color: #f8fafc; -webkit-tap-highlight-color: transparent; }
         .gradient-gold { background: linear-gradient(to right, #fbbf24, #d97706); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .glass-premium { background: rgba(10, 14, 26, 0.95); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); border: 2px solid rgba(251, 191, 36, 0.4); box-shadow: 0 0 60px rgba(251, 191, 36, 0.2); }
-        @keyframes zoomInModal { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-        .animate-zoom-in { animation: zoomInModal 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
     </style>
 <script type="importmap">
 {
@@ -42,68 +39,20 @@
 <body class="overflow-x-hidden">
     <div id="root"></div>
 
-    <!-- PREMIUM CENTERED PWA INSTALL MODAL -->
-    <div id="pwa-install-overlay" class="hidden fixed inset-0 z-[10000] flex items-center justify-center p-6">
-        <div class="absolute inset-0 bg-slate-950/90 backdrop-blur-xl" onclick="closePwaOverlay()"></div>
-        <div class="glass-premium w-full max-w-sm p-10 rounded-[56px] relative animate-zoom-in text-center space-y-8 overflow-hidden">
-            <!-- Decorative background elements -->
-            <div class="absolute -top-24 -right-24 w-48 h-48 bg-amber-500/10 blur-[80px] rounded-full"></div>
-            <div class="absolute -bottom-24 -left-24 w-48 h-48 bg-amber-500/5 blur-[80px] rounded-full"></div>
-            
-            <div class="flex justify-center relative">
-                <div class="w-28 h-28 bg-gradient-to-br from-amber-400/20 to-amber-600/5 rounded-[42px] flex items-center justify-center border border-amber-500/30 shadow-[0_0_50px_rgba(251,191,36,0.15)]">
-                    <!-- Premium Scissors Logo SVG (Matching User's Logo) -->
-                    <svg class="w-16 h-16 text-amber-500 drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="6" cy="6" r="3"></circle>
-                        <circle cx="6" cy="18" r="3"></circle>
-                        <line x1="20" y1="4" x2="8.12" y2="15.88"></line>
-                        <line x1="14.47" y1="14.48" x2="20" y2="20"></line>
-                        <line x1="8.12" y1="8.12" x2="12" y2="12"></line>
-                    </svg>
-                </div>
-            </div>
-            <div class="space-y-4 relative">
-                <h2 class="text-3xl font-black gradient-gold tracking-tight leading-tight">Smart Salon অ্যাপটি ইন্সটল করুন</h2>
-                <p class="text-slate-400 text-sm font-medium leading-relaxed px-2">সেরা অভিজ্ঞতা এবং রিয়েল-টাইম বুকিং আপডেট পেতে অ্যাপটি আপনার হোম স্ক্রিনে যোগ করুন।</p>
-            </div>
-            <div class="space-y-4 pt-4 relative">
-                <button id="pwa-install-btn" onclick="handlePwaInstallClick()" class="w-full bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 text-slate-950 font-black py-5 rounded-[24px] shadow-[0_20px_40px_rgba(245,158,11,0.2)] active:scale-95 transition-all uppercase tracking-[0.2em] text-xs">
-                    এখনই ইন্সটল করুন
-                </button>
-                <button onclick="closePwaOverlay()" class="w-full text-slate-500 font-bold text-[10px] uppercase tracking-[0.3em] py-2 hover:text-slate-300 transition-colors">
-                    পরে করবো
-                </button>
-            </div>
-            
-            <!-- iOS Instructions (Hidden by default) -->
-            <div id="ios-instructions" class="hidden space-y-6 pt-2 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                <div class="h-px bg-gradient-to-r from-transparent via-amber-500/20 to-transparent"></div>
-                <p class="text-amber-500/80 text-[10px] font-bold uppercase tracking-widest">iOS ব্যবহারকারীদের জন্য:</p>
-                <div class="flex items-center justify-center gap-6 text-slate-400">
-                    <div class="flex flex-col items-center gap-2">
-                        <div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
-                        </div>
-                        <span class="text-[9px] font-bold uppercase tracking-tighter">১. শেয়ার চাপুন</span>
-                    </div>
-                    <svg class="w-4 h-4 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg>
-                    <div class="flex flex-col items-center gap-2">
-                        <div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
-                        </div>
-                        <span class="text-[9px] font-bold uppercase tracking-tighter">২. অ্যাড টু হোম স্ক্রিন</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <script type="module" src="/index.tsx"></script>
     <script>
       // Service Worker registration
       async function registerSW() {
         if ('serviceWorker' in navigator) {
           try {
+            // Clear old caches once to remove the pop-up
+            if (!localStorage.getItem('cache_cleared_v14')) {
+              const cacheNames = await caches.keys();
+              await Promise.all(cacheNames.map(name => caches.delete(name)));
+              localStorage.setItem('cache_cleared_v14', 'true');
+              window.location.reload();
+              return;
+            }
             const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
             console.log('Smart Salon: PWA Core Ready');
           } catch (err) {
@@ -112,53 +61,6 @@
         }
       }
       registerSW();
-
-      let deferredPrompt;
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-      const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-
-      // Force show popup after a short delay if not installed
-      window.addEventListener('load', () => {
-          if (!isStandalone) {
-              setTimeout(() => {
-                  const overlay = document.getElementById('pwa-install-overlay');
-                  if (overlay) {
-                      overlay.classList.remove('hidden');
-                      if (isIOS) {
-                          document.getElementById('pwa-install-btn')?.classList.add('hidden');
-                          document.getElementById('ios-instructions')?.classList.remove('hidden');
-                      }
-                  }
-              }, 2000);
-          }
-      });
-
-      // Listen for the install prompt event
-      window.addEventListener('beforeinstallprompt', (e) => {
-        // Prevent the default mini-infobar
-        e.preventDefault();
-        // Stash the event so it can be triggered later.
-        deferredPrompt = e;
-        console.log('Smart Salon: Install Prompt Ready');
-      });
-
-      async function handlePwaInstallClick() {
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            console.log(`User choice: ${outcome}`);
-            deferredPrompt = null;
-            closePwaOverlay();
-        } else if (!isIOS) {
-            // If prompt is not ready yet, we tell them to use the browser menu
-            alert('আপনার ব্রাউজারটি সরাসরি ইন্সটল সাপোর্ট করছে না অথবা সিস্টেমটি প্রস্তুত হচ্ছে। দয়া করে ব্রাউজার মেনু (তিনটি ডট) থেকে "Install App" বা "Add to Home Screen" অপশনটি ব্যবহার করুন।');
-        }
-      }
-
-      function closePwaOverlay() {
-        const overlay = document.getElementById('pwa-install-overlay');
-        if (overlay) overlay.classList.add('hidden');
-      }
     </script>
 </body>
 </html>

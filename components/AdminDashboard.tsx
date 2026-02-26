@@ -23,7 +23,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
   const [editName, setEditName] = useState('');
   const [editLoc, setEditLoc] = useState('');
   const [editImg, setEditImg] = useState('');
-  const [editPriority, setEditPriority] = useState<number>(99);
+  const [editPriority, setEditPriority] = useState<number>(1000);
 
   // Admin fixed ID from storage.ts is 'admin1'
   const ADMIN_ID = 'admin1';
@@ -84,7 +84,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     setEditName(s.name);
     setEditLoc(s.location);
     setEditImg(s.image);
-    setEditPriority(s.priority || 99);
+    setEditPriority(s.priority || 1000);
   };
 
   const saveSalonEdits = () => {
@@ -230,7 +230,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
     let filtered = db.salons;
     if (salonSubFilter === 'ACTIVE') filtered = db.salons.filter(s => s.isActive);
     else if (salonSubFilter === 'INACTIVE') filtered = db.salons.filter(s => !s.isActive);
-    const sorted = [...filtered].sort((a,b) => (a.priority || 99) - (b.priority || 99));
+    const sorted = [...filtered].sort((a,b) => (a.priority || 1000) - (b.priority || 1000));
 
     return (
       <div className="space-y-10 animate-in slide-in-from-right-4 duration-500 pb-20">
@@ -256,10 +256,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                 <div className="absolute top-6 left-6 flex flex-col gap-2">
                    <button onClick={() => handleToggleActive(s.id, s.isActive)} className={`px-4 py-2 rounded-2xl text-[10px] font-black uppercase tracking-tighter border shadow-xl transition-all ${s.isActive ? 'bg-emerald-500 text-slate-950 border-emerald-400' : 'bg-red-500/10 text-red-500 border-red-500/30 backdrop-blur-md'}`}>{s.isActive ? 'সক্রিয়' : 'বন্ধ'}</button>
                    <div className="flex items-center bg-slate-950/60 backdrop-blur-md px-3 py-1.5 rounded-2xl border border-white/10">
-                      <span className="text-[8px] text-amber-500 font-black uppercase mr-2 tracking-tighter">Priority:</span>
+                      <span className="text-[8px] text-amber-500 font-black uppercase mr-2 tracking-tighter">Rank:</span>
                       <input 
                         type="number" 
-                        defaultValue={s.priority || 99}
+                        defaultValue={s.priority || 1000}
                         onBlur={(e) => handleQuickPriorityUpdate(s.id, e.target.value)}
                         className="w-8 bg-transparent text-white font-black text-xs outline-none focus:text-amber-400"
                       />
@@ -285,11 +285,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                   <div className="flex gap-4">
                      <button onClick={() => startEditing(s)} className="flex-1 bg-slate-800 hover:bg-slate-700 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg">এডিট</button>
                      <button onClick={() => {
-                       const p = prompt('Priority সেট করুন (১ মানে সবার উপরে)', s.priority?.toString() || '99');
+                       const p = prompt('সিরিয়াল নাম্বার সেট করুন (১ মানে সবার উপরে)', s.priority?.toString() || '1000');
                        if (p !== null) {
                          handleQuickPriorityUpdate(s.id, p);
                        }
-                     }} className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-900/30 transition-all">প্রাধান্য</button>
+                     }} className="flex-1 bg-indigo-600 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-900/30 transition-all">সিরিয়াল</button>
                   </div>
                 </div>
               </div>
@@ -319,8 +319,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout }) => {
                        <input type="text" value={editImg} onChange={e => setEditImg(e.target.value)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-5 px-6 text-white outline-none focus:border-amber-500/50 font-mono text-xs transition-all" />
                     </div>
                     <div className="space-y-2">
-                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">প্রাধান্য (Priority - ১ থেকে ৯৯)</label>
-                       <input type="number" value={editPriority} onChange={e => setEditPriority(parseInt(e.target.value) || 99)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-5 px-6 text-amber-500 outline-none focus:border-amber-500/50 font-black transition-all" />
+                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">লিস্ট সিরিয়াল (১ মানে সবার উপরে)</label>
+                       <input type="number" value={editPriority} onChange={e => setEditPriority(parseInt(e.target.value) || 1000)} className="w-full bg-slate-950 border border-slate-800 rounded-2xl py-5 px-6 text-amber-500 outline-none focus:border-amber-500/50 font-black transition-all" />
                     </div>
                  </div>
                  <button onClick={saveSalonEdits} className="w-full bg-gradient-to-r from-amber-400 to-amber-600 text-slate-950 font-black py-5 rounded-[24px] shadow-xl active:scale-95 transition-all uppercase tracking-widest text-sm">সেভ করুন</button>

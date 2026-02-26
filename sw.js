@@ -1,4 +1,4 @@
-const CACHE_NAME = 'smart-salon-cache-v13';
+const CACHE_NAME = 'smart-salon-cache-v14';
 const OFFLINE_URL = '/index.html';
 
 const ASSETS_TO_CACHE = [
