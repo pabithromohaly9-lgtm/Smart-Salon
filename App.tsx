@@ -20,39 +20,21 @@ const App: React.FC = () => {
 
   const isProduction = window.location.hostname.includes('vercel.app') || window.location.hostname !== 'localhost';
 
-  // OneSignal Tagging & Login Helper
-  const tagUserOneSignal = (user: User) => {
-    if (!isProduction) return;
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    window.OneSignalDeferred.push(async (OneSignal: any) => {
-      // এই লগইন ফাংশনটি আমাদের কোড থেকে পাঠানো পুশ নোটিফিকেশন ট্র্যাক করতে সাহায্য করবে
-      await OneSignal.login(user.id); 
-      const roleGroup = user.role === 'OWNER' ? 'owners' : user.role === 'USER' ? 'users' : 'admins';
-      await OneSignal.User.addTag("role", roleGroup);
-      
-      // Request permission immediately upon identifying user
-      OneSignal.Notifications.requestPermission();
-    });
+  // FCM Token & Login Helper
+  const tagUserFCM = (user: User) => {
+    localStorage.setItem('current_user_id', user.id);
+    const storedToken = localStorage.getItem('fcm_token');
+    if (storedToken) {
+      window.dispatchEvent(new CustomEvent('fcm_token_received', { detail: storedToken }));
+    }
   };
 
   useEffect(() => {
-    // 1. OneSignal Initialization
-    if (isProduction) {
-      window.OneSignalDeferred = window.OneSignalDeferred || [];
-      window.OneSignalDeferred.push(async (OneSignal: any) => {
-        await OneSignal.init({
-          appId: "152c0a9a-f428-4f83-b749-c394205ae4af",
-          notifyButton: { enable: false },
-          allowLocalhostAsSecureOrigin: true,
-        });
-      });
-    }
-
     const user = getCurrentUser();
     if (user) {
       setCurrentUser(user);
       setView('DASHBOARD');
-      tagUserOneSignal(user);
+      tagUserFCM(user);
     }
 
     const interval = setInterval(() => checkUpcomingBookingsAndNotify(), 60000);
@@ -78,17 +60,12 @@ const App: React.FC = () => {
     if (user) {
       setCurrentUser(user);
       setView('DASHBOARD');
-      tagUserOneSignal(user);
+      tagUserFCM(user);
     }
   };
 
   const handleLogout = () => {
-    if (isProduction) {
-      window.OneSignalDeferred = window.OneSignalDeferred || [];
-      window.OneSignalDeferred.push(async (OneSignal: any) => {
-        await OneSignal.logout();
-      });
-    }
+    localStorage.removeItem('current_user_id');
     logout();
     setCurrentUser(null);
     setView('AUTH');

@@ -9,6 +9,7 @@ export interface User {
   pin: string; // ৪ ডিজিটের পিন
   avatar?: string;
   address?: string;
+  fcm_token?: string;
 }
 
 export interface Salon {
