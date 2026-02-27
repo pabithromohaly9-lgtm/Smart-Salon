@@ -1,9 +1,18 @@
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import admin from "firebase-admin";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(express.json());
+
+// Serve PWA files directly at the root level BEFORE any other middleware
+// This prevents Vite or other middleware from redirecting these requests
+app.use(express.static(path.join(__dirname, "public")));
 
 // Firebase Admin Initialization using provided Service Account JSON
 const serviceAccount = {
@@ -62,15 +71,6 @@ app.post("/api/send-notification", async (req, res) => {
     console.error("Error sending message:", error);
     res.status(500).json({ error: "Failed to send notification" });
   }
-});
-
-// Serve PWA files directly to avoid redirects
-app.get("/sw.js", (req, res) => {
-  res.sendFile("public/sw.js", { root: "." });
-});
-
-app.get("/manifest.json", (req, res) => {
-  res.sendFile("public/manifest.json", { root: "." });
 });
 
 // Vite middleware for development
