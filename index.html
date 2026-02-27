@@ -194,12 +194,19 @@
               return;
             }
             
-            const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+            // Register as module to support 'import' in sw.js
+            const registration = await navigator.serviceWorker.register('/sw.js', { 
+                scope: '/',
+                type: 'module' 
+            });
             console.log('PWA Debug: Service Worker Registered');
 
-            // Check if we should show notification permission dialog
-            if (Notification.permission !== 'granted' && (isWebView() || localStorage.getItem('current_user_id'))) {
-                notifyOverlay.classList.remove('hidden');
+            // Automatic Notification Permission Request for Mobile/APK
+            if (Notification.permission === 'default') {
+                if (isWebView() || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                    // Show premium modal first for better UX, then request
+                    notifyOverlay.classList.remove('hidden');
+                }
             } else if (Notification.permission === 'granted') {
                 setupFCM();
             }

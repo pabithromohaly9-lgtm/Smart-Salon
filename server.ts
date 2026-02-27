@@ -64,6 +64,15 @@ app.post("/api/send-notification", async (req, res) => {
   }
 });
 
+// Serve PWA files directly to avoid redirects
+app.get("/sw.js", (req, res) => {
+  res.sendFile("public/sw.js", { root: "." });
+});
+
+app.get("/manifest.json", (req, res) => {
+  res.sendFile("public/manifest.json", { root: "." });
+});
+
 // Vite middleware for development
 async function startServer() {
   if (process.env.NODE_ENV !== "production") {
